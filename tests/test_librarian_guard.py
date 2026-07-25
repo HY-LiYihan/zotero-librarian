@@ -34,6 +34,12 @@ class TaxonomyTests(unittest.TestCase):
         taxonomy = guard.load_toml(ROOT / "taxonomy.example.toml")
         self.assertEqual([], guard.validate_taxonomy(taxonomy))
 
+    def test_installed_skill_taxonomy_is_valid(self) -> None:
+        taxonomy = guard.load_toml(
+            ROOT / "skills" / "zotero-librarian" / "references" / "taxonomy.example.toml"
+        )
+        self.assertEqual([], guard.validate_taxonomy(taxonomy))
+
     def test_rejects_permanent_deletion_policy(self) -> None:
         taxonomy = {**VALID_TAXONOMY, "policy": {"deletion": "erase", "attachment_mode": "stored"}}
         self.assertIn("policy.deletion must be 'trash-only'", guard.validate_taxonomy(taxonomy))

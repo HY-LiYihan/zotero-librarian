@@ -1,0 +1,20 @@
+version = 1
+
+[collections]
+inbox = "Inbox"
+archive = "Archive"
+needs_review = "Needs Review"
+
+[tags]
+allowed_prefixes = ["topic", "method", "status", "priority"]
+allow_unprefixed = false
+reuse_existing = true
+
+[tags.exclusive]
+status = ["status:inbox", "status:to-read", "status:reading", "status:read", "status:archived"]
+priority = ["priority:low", "priority:normal", "priority:high", "priority:must-read"]
+
+[policy]
+create_missing_collections = false
+deletion = "trash-only"
+attachment_mode = "stored"

@@ -1,6 +1,6 @@
 # Taxonomy and Plan Rules
 
-Copy `taxonomy.example.toml` to a user-controlled location. The taxonomy is policy, not a dump of every Zotero tag.
+Copy [taxonomy.example.toml](taxonomy.example.toml) to a user-controlled location. The taxonomy is policy, not a dump of every Zotero tag.
 
 ## Design Rules
 

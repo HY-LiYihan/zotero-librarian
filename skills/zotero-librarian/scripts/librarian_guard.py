@@ -152,6 +152,10 @@ def validate_plan_line(
         if len(tags) != len(set(str(tag) for tag in tags)):
             errors.append(f"{prefix}: {field} contains duplicates")
         for tag in tags:
+            if field == "removeTags":
+                if not isinstance(tag, str) or not tag.strip():
+                    errors.append(f"{prefix}: removeTags entries must be non-empty strings")
+                continue
             reason = validate_tag(tag, prefixes, allow_unprefixed)
             if reason:
                 errors.append(f"{prefix}: invalid {field} tag {tag!r}: {reason}")

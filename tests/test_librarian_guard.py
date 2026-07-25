@@ -80,6 +80,12 @@ class PlanTests(unittest.TestCase):
         errors, _, _ = self.validate_lines('{"key":"ABCD1234","addTags":["To Read"]}\n')
         self.assertTrue(any("unprefixed tags are disabled" in error for error in errors))
 
+    def test_allows_removing_legacy_unprefixed_tags(self) -> None:
+        errors, _, _ = self.validate_lines(
+            '{"key":"ABCD1234","addTags":["status:to-read"],"removeTags":["To Read"]}\n'
+        )
+        self.assertEqual([], errors)
+
     def test_rejects_duplicate_item_keys(self) -> None:
         errors, _, _ = self.validate_lines(
             '{"key":"ABCD1234","trash":false}\n{"key":"ABCD1234","trash":true}\n'

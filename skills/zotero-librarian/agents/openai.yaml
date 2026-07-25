@@ -1,0 +1,4 @@
+interface:
+  display_name: "Zotero Librarian"
+  short_description: "Safely organize and maintain Zotero libraries"
+  default_prompt: "Use $zotero-librarian to audit and organize my Zotero library safely."

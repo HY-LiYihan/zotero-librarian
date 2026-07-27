@@ -70,6 +70,12 @@ class PlanTests(unittest.TestCase):
         self.assertTrue(any("unsupported fields" in error for error in errors))
         self.assertTrue(any("permanent-delete" in error for error in errors))
 
+    def test_rejects_complex_fields_inside_set(self) -> None:
+        errors, _, _ = self.validate_lines(
+            '{"key":"ABCD1234","set":{"creators":[{"lastName":"Example"}]}}\n'
+        )
+        self.assertTrue(any("unsupported set fields: creators" in error for error in errors))
+
     def test_rejects_conflicting_exclusive_tags(self) -> None:
         errors, _, _ = self.validate_lines(
             '{"key":"ABCD1234","addTags":["status:to-read","status:read"]}\n'

@@ -33,6 +33,11 @@ Write one JSON object per item. Use only the upstream `zot apply` fields:
 {"key":"ABCD1234","set":{"abstractNote":"Verified abstract"},"addTags":["topic:robotics","status:to-read"],"removeTags":["To Read"],"addToCollection":"Robotics","trash":false}
 ```
 
+Do not place `creators`, `tags`, `collections`, or `relations` inside `set`.
+The generic field setter rejects these complex fields and may partially apply a
+mixed plan. Use dedicated tag and collection operations. Leave creator fixes in
+`status:needs-review` until the installed backend exposes a supported command.
+
 Validate before preview:
 
 ```bash
@@ -63,3 +68,16 @@ Keep the backup path and operation ID. Re-query affected items and verify exact 
 - New collections: preview names and parents, reject case-insensitive duplicates, then create them before applying item membership plans.
 - Enrichment: dry-run Crossref/OpenAlex candidates and retain source identifiers. Do not overwrite non-empty conflicting metadata automatically.
 - Large jobs: split into reviewable batches and verify each batch before continuing.
+
+For missing abstracts, the bundled plan generator reads exported Zotero JSON and
+produces JSONL without writing to Zotero:
+
+```bash
+zot missing abstract --json > missing.json
+python3 scripts/metadata_enricher.py missing.json --output abstracts.jsonl --report report.json
+python3 scripts/librarian_guard.py plan abstracts.jsonl --taxonomy taxonomy.toml
+zot apply abstracts.jsonl --dry-run --json
+```
+
+It fills empty abstracts only, uses deterministic arXiv, Crossref, ACL Anthology,
+and PMLR sources, and rejects title mismatches. Review its report before applying.

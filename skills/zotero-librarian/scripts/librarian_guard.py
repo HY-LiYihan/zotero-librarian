@@ -29,6 +29,7 @@ ALLOWED_PLAN_FIELDS = {
     "trash",
 }
 FORBIDDEN_WORDS = {"erase", "eraseTx", "deletePermanently", "emptyTrash"}
+UNSUPPORTED_SET_FIELDS = {"collections", "creators", "relations", "tags"}
 
 
 class ValidationError(ValueError):
@@ -132,8 +133,16 @@ def validate_plan_line(
     if len(value) == 1 and "key" in value:
         errors.append(f"{prefix}: entry contains no change")
 
-    if "set" in value and not isinstance(value["set"], dict):
-        errors.append(f"{prefix}: set must be an object")
+    if "set" in value:
+        if not isinstance(value["set"], dict):
+            errors.append(f"{prefix}: set must be an object")
+        else:
+            unsupported = set(value["set"]) & UNSUPPORTED_SET_FIELDS
+            if unsupported:
+                errors.append(
+                    f"{prefix}: unsupported set fields: {', '.join(sorted(unsupported))}; "
+                    "use dedicated zot operations"
+                )
     if "trash" in value and not isinstance(value["trash"], bool):
         errors.append(f"{prefix}: trash must be boolean")
     if "addToCollection" in value and (

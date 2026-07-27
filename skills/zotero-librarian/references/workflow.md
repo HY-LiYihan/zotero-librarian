@@ -95,9 +95,10 @@ python3 scripts/librarian_guard.py plan abstracts.jsonl --taxonomy taxonomy.toml
 zot apply abstracts.jsonl --dry-run --json
 ```
 
-It fills empty abstracts only, uses deterministic arXiv, Crossref, ACL Anthology,
-PMLR, official-document, and identity-checked OpenAlex sources, and rejects title,
-year, or source-identifier mismatches. Review its report before applying.
+It fills empty abstracts only, uses deterministic arXiv, Crossref, DOI-addressed
+Semantic Scholar, ACL Anthology, PMLR, official-document, and identity-checked
+OpenAlex sources, and rejects title, year, or source-identifier mismatches. Review
+its report before applying.
 
 The same script can derive DOI values only when the existing URL makes the DOI
 deterministic. It does not perform fuzzy title lookup:

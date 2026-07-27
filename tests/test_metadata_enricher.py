@@ -56,6 +56,38 @@ class ProviderTests(unittest.TestCase):
         self.assertIn("10.1234%2Fexample", request_text.call_args.args[0])
 
     @patch.object(enricher, "request_text")
+    def test_semantic_scholar_doi_abstract_with_year_check(self, request_text) -> None:
+        request_text.return_value = (
+            '{"title":"A Sufficiently Specific Example Paper Title",'
+            '"year":2024,"abstract":"Authoritative abstract."}'
+        )
+        result = enricher.fetch_semantic_scholar(
+            {
+                "doi": "10.1234/example",
+                "title": "A Sufficiently Specific Example Paper Title",
+                "year": "2024",
+            },
+            1,
+        )
+        self.assertEqual("Authoritative abstract.", result.abstract)
+        self.assertIn("DOI%3A10.1234%2Fexample", request_text.call_args.args[0])
+
+        request_text.return_value = (
+            '{"title":"A Sufficiently Specific Example Paper Title",'
+            '"year":2023,"abstract":"Wrong year."}'
+        )
+        self.assertIsNone(
+            enricher.fetch_semantic_scholar(
+                {
+                    "doi": "10.1234/example",
+                    "title": "A Sufficiently Specific Example Paper Title",
+                    "year": "2024",
+                },
+                1,
+            )
+        )
+
+    @patch.object(enricher, "request_text")
     def test_openalex_reconstructs_abstract_and_checks_year(self, request_text) -> None:
         request_text.return_value = (
             '{"results":[{"display_name":"A Sufficiently Specific Example Paper Title",'

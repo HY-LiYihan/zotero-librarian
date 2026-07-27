@@ -137,6 +137,31 @@ def fetch_crossref(item: dict[str, Any], timeout: float) -> Metadata | None:
     return Metadata(title, abstract, "Crossref") if title and abstract else None
 
 
+def fetch_semantic_scholar(item: dict[str, Any], timeout: float) -> Metadata | None:
+    doi = str(item.get("doi") or item.get("DOI") or "").strip()
+    if not doi:
+        match = DOI_IN_URL.search(str(item.get("url") or ""))
+        doi = urllib.parse.unquote(match.group(1)).rstrip("/") if match else ""
+    if not doi:
+        return None
+    fields = urllib.parse.urlencode({"fields": "title,year,abstract"})
+    identifier = urllib.parse.quote("DOI:" + doi, safe="")
+    payload = json.loads(
+        request_text(
+            f"https://api.semanticscholar.org/graph/v1/paper/{identifier}?{fields}",
+            accept="application/json",
+            timeout=timeout,
+        )
+    )
+    title = str(payload.get("title") or "")
+    abstract = clean_abstract(str(payload.get("abstract") or ""))
+    expected_year = str(item.get("year") or "").strip()
+    candidate_year = str(payload.get("year") or "")
+    if expected_year and candidate_year and expected_year != candidate_year:
+        return None
+    return Metadata(title, abstract, "Semantic Scholar") if title and abstract else None
+
+
 def openalex_abstract(inverted_index: Any) -> str:
     if not isinstance(inverted_index, dict):
         return ""
@@ -232,6 +257,7 @@ PROVIDERS: tuple[Callable[[dict[str, Any], float], Metadata | None], ...] = (
     fetch_arxiv,
     fetch_html_meta,
     fetch_crossref,
+    fetch_semantic_scholar,
     fetch_official_description,
     fetch_openalex,
 )

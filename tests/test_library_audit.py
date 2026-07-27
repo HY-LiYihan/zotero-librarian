@@ -72,6 +72,22 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(["ABCD1234"], result["findings"]["withoutTopic"])
         self.assertEqual(["ABCD1234"], result["findings"]["unqueuedMissingPdf"])
 
+    def test_respects_date_and_creator_applicability_tags(self) -> None:
+        value = item(
+            "ABCD1234",
+            tags=(
+                "topic:test",
+                "status:needs-pdf",
+                "status:date-not-applicable",
+                "status:creator-not-applicable",
+            ),
+            date="",
+            creators=False,
+        )
+        result = audit_module.audit([value])
+        self.assertEqual([], result["findings"]["missingDate"])
+        self.assertEqual([], result["findings"]["missingCreators"])
+
 
 if __name__ == "__main__":
     unittest.main()

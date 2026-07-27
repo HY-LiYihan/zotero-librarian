@@ -79,9 +79,9 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
             "status:abstract-not-applicable" in tags
         ):
             findings["actionableMissingAbstract"].append(key)
-        if not str(data.get("date") or "").strip():
+        if not str(data.get("date") or "").strip() and "status:date-not-applicable" not in tags:
             findings["missingDate"].append(key)
-        if not data.get("creators"):
+        if not data.get("creators") and "status:creator-not-applicable" not in tags:
             findings["missingCreators"].append(key)
 
     return {
@@ -113,7 +113,15 @@ def main() -> int:
     if args.expect_items is not None and result["parents"] != args.expect_items:
         errors.append(f"expected {args.expect_items} parent items, found {result['parents']}")
     if args.strict:
-        for field in ("noTags", "withoutTopic", "staleNeedsPdf", "unqueuedMissingPdf", "actionableMissingAbstract"):
+        for field in (
+            "noTags",
+            "withoutTopic",
+            "staleNeedsPdf",
+            "unqueuedMissingPdf",
+            "actionableMissingAbstract",
+            "missingDate",
+            "missingCreators",
+        ):
             if result["counts"][field]:
                 errors.append(f"{field}: {result['counts'][field]}")
     print(json.dumps({"ok": not errors, **result, "errors": errors}, ensure_ascii=False, indent=2))

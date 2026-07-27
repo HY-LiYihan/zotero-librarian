@@ -73,7 +73,9 @@ python3 scripts/library_audit.py library.json --expect-items <BASELINE>
 Use `--strict` only as a completion gate. It fails while actionable abstracts,
 missing topic tags, stale `status:needs-pdf` tags, or unqueued scholarly PDFs
 remain. Fields explicitly tagged `status:abstract-not-applicable` are not counted
-as actionable abstract gaps.
+as actionable abstract gaps. Likewise, use `status:date-not-applicable` and
+`status:creator-not-applicable` only when the item genuinely has no such field;
+the auditor otherwise treats missing dates and creators as strict failures.
 
 ## Special Cases
 

@@ -61,6 +61,20 @@ zot apply edits.jsonl --yes --json
 
 Keep the backup path and operation ID. Re-query affected items and verify exact field, tag, collection, attachment, note, or Trash state. On mismatch, stop and use `zot undo <operation-id>` where supported.
 
+For a repeatable whole-library completion audit, export all local items and run
+the bundled auditor. It excludes child notes, annotations, and attachments from
+the parent count and checks topic coverage plus PDF queue consistency:
+
+```bash
+zot search '' --all --json > library.json
+python3 scripts/library_audit.py library.json --expect-items <BASELINE>
+```
+
+Use `--strict` only as a completion gate. It fails while actionable abstracts,
+missing topic tags, stale `status:needs-pdf` tags, or unqueued scholarly PDFs
+remain. Fields explicitly tagged `status:abstract-not-applicable` are not counted
+as actionable abstract gaps.
+
 ## Special Cases
 
 - Duplicate merge: run exact DOI and title detection before fuzzy detection. For every group, compare DOI/ISBN/arXiv ID, title, creators, year, item type, fields, tags, collections, notes, and attachments. The upstream merge always keeps the oldest item as master and merges every group in the selected scope. Use `zot dedupe --merge` only when the user approves every reported group and accepts the oldest master for each. Otherwise stop and direct the user to merge the selected group in Zotero's Duplicate Items UI; do not use `zot exec` to bypass this limit. Immediately before an approved merge, disable auto-sync, run `zot backup`, re-run the same scoped detection, and confirm the groups are unchanged. After merging, verify the master retains expected metadata, tags, collections, notes, and attachments, then let the user re-enable sync. A merge has no `zot undo`; recovery requires restoring the printed database backup.

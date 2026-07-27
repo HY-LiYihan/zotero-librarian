@@ -80,4 +80,14 @@ zot apply abstracts.jsonl --dry-run --json
 ```
 
 It fills empty abstracts only, uses deterministic arXiv, Crossref, ACL Anthology,
-and PMLR sources, and rejects title mismatches. Review its report before applying.
+PMLR, official-document, and identity-checked OpenAlex sources, and rejects title,
+year, or source-identifier mismatches. Review its report before applying.
+
+The same script can derive DOI values only when the existing URL makes the DOI
+deterministic. It does not perform fuzzy title lookup:
+
+```bash
+zot missing doi --json > missing-doi.json
+python3 scripts/metadata_enricher.py missing-doi.json --field doi \
+  --output dois.jsonl --report doi-report.json
+```

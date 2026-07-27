@@ -10,6 +10,10 @@ Use linked files only when the user explicitly provides a stable absolute root t
 
 ## Repair and Acquisition
 
+- Do not run `zot missing pdf`: `pdf` is not a supported `zot missing` field and
+  current CLI versions report every parent item as missing. Use `zot stats` for
+  aggregate counts and inspect each item's `links.attachment` or `zot pdf KEY`
+  for authoritative attachment state.
 - Inspect current children before adding another PDF.
 - Prefer a verified open-access publisher, DOI, or arXiv source.
 - Validate HTTP status, PDF signature, and a reasonable file size.

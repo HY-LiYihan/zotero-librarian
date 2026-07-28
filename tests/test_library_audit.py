@@ -67,6 +67,29 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(["IJKL9012"], result["findings"]["staleNeedsPdf"])
         self.assertEqual([], result["findings"]["unqueuedMissingPdf"])
 
+    def test_tracks_verified_unavailable_abstract_without_hiding_metadata_conflict(self) -> None:
+        values = [
+            item(
+                "ABCD1234",
+                tags=("topic:test", "status:needs-pdf", "status:abstract-unavailable"),
+                abstract="",
+            ),
+            item(
+                "EFGH5678",
+                tags=(
+                    "topic:test",
+                    "status:needs-pdf",
+                    "status:abstract-unavailable",
+                    "status:metadata-conflict",
+                ),
+                abstract="",
+            ),
+        ]
+        result = audit_module.audit(values)
+        self.assertEqual([], result["findings"]["actionableMissingAbstract"])
+        self.assertEqual(["ABCD1234", "EFGH5678"], result["findings"]["abstractUnavailable"])
+        self.assertEqual(["EFGH5678"], result["findings"]["metadataConflict"])
+
     def test_reports_missing_topic_and_unqueued_pdf(self) -> None:
         result = audit_module.audit([item("ABCD1234", tags=("priority:high",))])
         self.assertEqual(["ABCD1234"], result["findings"]["withoutTopic"])

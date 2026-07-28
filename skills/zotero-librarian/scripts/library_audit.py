@@ -53,6 +53,8 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
         "staleNeedsPdf": [],
         "unqueuedMissingPdf": [],
         "actionableMissingAbstract": [],
+        "abstractUnavailable": [],
+        "metadataConflict": [],
         "missingDate": [],
         "missingCreators": [],
     }
@@ -75,10 +77,13 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
             and "status:needs-pdf" not in tags
         ):
             findings["unqueuedMissingPdf"].append(key)
-        if not str(data.get("abstractNote") or "").strip() and not (
-            "status:abstract-not-applicable" in tags
-        ):
-            findings["actionableMissingAbstract"].append(key)
+        if "status:metadata-conflict" in tags:
+            findings["metadataConflict"].append(key)
+        if not str(data.get("abstractNote") or "").strip():
+            if "status:abstract-unavailable" in tags:
+                findings["abstractUnavailable"].append(key)
+            elif "status:abstract-not-applicable" not in tags:
+                findings["actionableMissingAbstract"].append(key)
         if not str(data.get("date") or "").strip() and "status:date-not-applicable" not in tags:
             findings["missingDate"].append(key)
         if not data.get("creators") and "status:creator-not-applicable" not in tags:
@@ -119,6 +124,7 @@ def main() -> int:
             "staleNeedsPdf",
             "unqueuedMissingPdf",
             "actionableMissingAbstract",
+            "metadataConflict",
             "missingDate",
             "missingCreators",
         ):

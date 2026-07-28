@@ -10,6 +10,9 @@ Copy [taxonomy.example.toml](taxonomy.example.toml) to a user-controlled locatio
 - Reuse existing names exactly; propose migrations for spelling/case variants.
 - Keep personal domain examples out of the distributed template.
 - Do not create collections or tags when the taxonomy forbids them.
+- Reserve `status:abstract-unavailable` for a completed authoritative-source
+  check and `status:metadata-conflict` for unresolved identity disagreement.
+  Neither tag is a substitute for guessing or overwriting metadata.
 
 ## Validation
 

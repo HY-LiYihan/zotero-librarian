@@ -100,7 +100,10 @@ configured authoritative providers have been checked and none exposes an
 abstract; the auditor reports these separately without treating them as pending
 enrichment. Tag title/creator/year/DOI/URL identity disagreements with
 `status:metadata-conflict`; strict audit continues to fail until those conflicts
-are resolved. Likewise, use `status:date-not-applicable` and
+are resolved. If a conflict cannot be safely resolved, add a child note titled
+or beginning with `Zotero Librarian metadata conflict audit` that records the
+checked sources and decision; the auditor reports these as documented without
+hiding the strict failure. Likewise, use `status:date-not-applicable` and
 `status:creator-not-applicable` only when the item genuinely has no such field;
 the auditor otherwise treats missing dates and creators as strict failures.
 

@@ -41,6 +41,17 @@ def item(
     return value
 
 
+def note(key: str, parent: str, body: str):
+    return {
+        "key": key,
+        "data": {
+            "itemType": "note",
+            "parentItem": parent,
+            "note": body,
+        },
+    }
+
+
 class AuditTests(unittest.TestCase):
     def test_excludes_children_and_reports_clean_parent(self) -> None:
         values = [
@@ -89,6 +100,22 @@ class AuditTests(unittest.TestCase):
         self.assertEqual([], result["findings"]["actionableMissingAbstract"])
         self.assertEqual(["ABCD1234", "EFGH5678"], result["findings"]["abstractUnavailable"])
         self.assertEqual(["EFGH5678"], result["findings"]["metadataConflict"])
+        self.assertEqual(["EFGH5678"], result["findings"]["metadataConflictUndocumented"])
+
+    def test_distinguishes_documented_metadata_conflicts(self) -> None:
+        values = [
+            item("ABCD1234", tags=("topic:test", "status:metadata-conflict")),
+            item("EFGH5678", tags=("topic:test", "status:metadata-conflict")),
+            note(
+                "NOTE1234",
+                "ABCD1234",
+                "<p>Zotero Librarian metadata conflict audit: current URL mismatch.</p>",
+            ),
+        ]
+        result = audit_module.audit(values)
+        self.assertEqual(["ABCD1234", "EFGH5678"], result["findings"]["metadataConflict"])
+        self.assertEqual(["ABCD1234"], result["findings"]["metadataConflictDocumented"])
+        self.assertEqual(["EFGH5678"], result["findings"]["metadataConflictUndocumented"])
 
     def test_reports_missing_topic_and_unqueued_pdf(self) -> None:
         result = audit_module.audit([item("ABCD1234", tags=("priority:high",))])

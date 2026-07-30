@@ -41,6 +41,20 @@ def has_pdf(item: dict[str, Any]) -> bool:
     return item.get("links", {}).get("attachment", {}).get("attachmentType") == "application/pdf"
 
 
+def conflict_note_parents(items: list[dict[str, Any]]) -> set[str]:
+    parents: set[str] = set()
+    marker = "Zotero Librarian metadata conflict audit"
+    for item in items:
+        data = item.get("data", {})
+        if data.get("itemType") != "note":
+            continue
+        parent = data.get("parentItem")
+        note = str(data.get("note") or "")
+        if isinstance(parent, str) and marker in note:
+            parents.add(parent)
+    return parents
+
+
 def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
     parents = [
         item
@@ -55,9 +69,12 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
         "actionableMissingAbstract": [],
         "abstractUnavailable": [],
         "metadataConflict": [],
+        "metadataConflictDocumented": [],
+        "metadataConflictUndocumented": [],
         "missingDate": [],
         "missingCreators": [],
     }
+    documented_conflicts = conflict_note_parents(items)
     with_pdf = 0
     for item in parents:
         data = item.get("data", {})
@@ -79,6 +96,10 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
             findings["unqueuedMissingPdf"].append(key)
         if "status:metadata-conflict" in tags:
             findings["metadataConflict"].append(key)
+            if key in documented_conflicts:
+                findings["metadataConflictDocumented"].append(key)
+            else:
+                findings["metadataConflictUndocumented"].append(key)
         if not str(data.get("abstractNote") or "").strip():
             if "status:abstract-unavailable" in tags:
                 findings["abstractUnavailable"].append(key)

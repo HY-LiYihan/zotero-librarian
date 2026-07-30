@@ -65,6 +65,7 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
         "noTags": [],
         "withoutTopic": [],
         "staleNeedsPdf": [],
+        "webpageNeedsPdf": [],
         "unqueuedMissingPdf": [],
         "actionableMissingAbstract": [],
         "abstractUnavailable": [],
@@ -88,6 +89,8 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
             findings["withoutTopic"].append(key)
         if pdf and "status:needs-pdf" in tags:
             findings["staleNeedsPdf"].append(key)
+        if not pdf and data.get("itemType") == "webpage" and "status:needs-pdf" in tags:
+            findings["webpageNeedsPdf"].append(key)
         if (
             not pdf
             and data.get("itemType") in SCHOLARLY_TYPES
@@ -143,6 +146,7 @@ def main() -> int:
             "noTags",
             "withoutTopic",
             "staleNeedsPdf",
+            "webpageNeedsPdf",
             "unqueuedMissingPdf",
             "actionableMissingAbstract",
             "metadataConflict",

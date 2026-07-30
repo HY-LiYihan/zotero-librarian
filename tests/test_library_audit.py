@@ -122,6 +122,19 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(["ABCD1234"], result["findings"]["withoutTopic"])
         self.assertEqual(["ABCD1234"], result["findings"]["unqueuedMissingPdf"])
 
+    def test_reports_webpages_in_pdf_queue(self) -> None:
+        result = audit_module.audit(
+            [
+                item(
+                    "ABCD1234",
+                    item_type="webpage",
+                    tags=("topic:test", "status:needs-pdf", "status:abstract-not-applicable"),
+                )
+            ]
+        )
+        self.assertEqual(["ABCD1234"], result["findings"]["webpageNeedsPdf"])
+        self.assertEqual([], result["findings"]["unqueuedMissingPdf"])
+
     def test_respects_date_and_creator_applicability_tags(self) -> None:
         value = item(
             "ABCD1234",

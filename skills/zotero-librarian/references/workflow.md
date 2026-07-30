@@ -106,7 +106,17 @@ python3 scripts/identity_audit.py library.json --keys <ITEM_KEY> --only-conflict
 ```
 
 The identity auditor checks DOI fields only when `--include-doi-field` is passed,
-because full-library Crossref scans are slower and should be deliberate.
+because full-library Crossref scans are slower and should be deliberate. When a
+conflict remains unresolved, turn the audit JSON into a decision report instead
+of guessing:
+
+```bash
+python3 scripts/identity_audit.py library.json --only-conflicts --workers 4   --output identity-report.json
+python3 scripts/conflict_report.py library.json identity-report.json   --output metadata-conflicts.md
+```
+
+The decision report is read-only. It records the current Zotero identity, source
+identity, evidence, review-note state, and the safe options for user approval.
 
 Use `--strict` only as a completion gate. It fails while actionable abstracts,
 missing topic tags, stale `status:needs-pdf` tags, webpages queued for PDFs, or

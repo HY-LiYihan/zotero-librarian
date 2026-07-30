@@ -111,12 +111,26 @@ conflict remains unresolved, turn the audit JSON into a decision report instead
 of guessing:
 
 ```bash
-python3 scripts/identity_audit.py library.json --only-conflicts --workers 4   --output identity-report.json
-python3 scripts/conflict_report.py library.json identity-report.json   --output metadata-conflicts.md
+python3 scripts/identity_audit.py library.json --only-conflicts --workers 4 \
+  --output identity-report.json
+python3 scripts/conflict_report.py library.json identity-report.json \
+  --output metadata-conflicts.md
 ```
 
 The decision report is read-only. It records the current Zotero identity, source
 identity, evidence, review-note state, and the safe options for user approval.
+If the user approves treating a supported source identity as authoritative,
+generate a guarded candidate plan and still preview it before writing:
+
+```bash
+python3 scripts/source_identity_plan.py library.json identity-report.json \
+  --output source-identity-plan.jsonl --report source-identity-report.json
+python3 scripts/librarian_apply.py source-identity-plan.jsonl --dry-run --json
+```
+
+Do not apply the plan until the user explicitly chooses the source identity and
+approves the write. Applying still requires the normal backup, sample/verify,
+operation ID, and undo workflow.
 
 Use `--strict` only as a completion gate. It fails while actionable abstracts,
 missing topic tags, stale `status:needs-pdf` tags, webpages queued for PDFs, or

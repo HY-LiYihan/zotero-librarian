@@ -62,6 +62,22 @@ python3 skills/zotero-librarian/scripts/librarian_guard.py plan \
 
 校验器只检查规则和格式。科学分类必须由 Agent 根据元数据、摘要或 PDF 证据完成。
 
+## 完成闸门
+
+审计或整理完成后，用 `goal_status.py` 作为全库最终检查：
+
+```bash
+zot search '' --all --json > library.json
+python3 skills/zotero-librarian/scripts/goal_status.py library.json --expect-items <BASELINE>
+```
+
+状态报告会区分两个结果：
+
+- `automationComplete`：没有剩余可自动处理的缺标签、缺元数据、PDF 队列问题或父条目数量漂移。
+- `fullComplete`：更严格的完成状态，没有任何已记录元数据冲突或仍需人工复核的条目。
+
+如果 `automationComplete` 为 true 但 `fullComplete` 为 false，Agent 必须停止并要求用户明确选择文献身份。此时可以用 `identity_audit.py`、`conflict_report.py`，并且只在用户批准后用 `source_identity_plan.py` 准备 dry-run 修复计划。不能把已记录冲突自动转换成写入。
+
 ## 安全边界
 
 - 不需要或保存 Zotero Web API key。

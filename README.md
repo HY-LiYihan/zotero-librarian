@@ -62,6 +62,22 @@ python3 skills/zotero-librarian/scripts/librarian_guard.py plan \
 
 The guard validates policy and shape only. Scientific classification remains the Agent's responsibility and must be grounded in item metadata or PDF evidence.
 
+## Completion gates
+
+Use `goal_status.py` as the final whole-library gate after an audit or cleanup:
+
+```bash
+zot search '' --all --json > library.json
+python3 skills/zotero-librarian/scripts/goal_status.py library.json --expect-items <BASELINE>
+```
+
+The status report separates two states:
+
+- `automationComplete`: no remaining actionable missing tags, metadata, PDF queue issues, or parent-count drift.
+- `fullComplete`: the stricter state where no documented metadata conflict or manual review item remains.
+
+If `automationComplete` is true but `fullComplete` is false, the Agent must stop and ask for an explicit identity decision. Use `identity_audit.py`, `conflict_report.py`, and, only after user approval, `source_identity_plan.py` to prepare a dry-run repair plan. Do not turn a documented conflict into a write automatically.
+
 ## Safety boundary
 
 - No Zotero Web API key is required or stored.

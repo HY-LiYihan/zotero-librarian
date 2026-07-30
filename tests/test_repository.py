@@ -28,6 +28,16 @@ class RepositoryTests(unittest.TestCase):
                 offenders.append(str(path.relative_to(ROOT)))
         self.assertEqual([], offenders)
 
+
+    def test_readmes_document_completion_gates(self) -> None:
+        english = (ROOT / "README.md").read_text(encoding="utf-8")
+        chinese = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+        for value in (english, chinese):
+            self.assertIn("goal_status.py", value)
+            self.assertIn("automationComplete", value)
+            self.assertIn("fullComplete", value)
+            self.assertIn("source_identity_plan.py", value)
+
     def test_skill_has_no_personal_paths_or_taxonomy(self) -> None:
         text = "\n".join(
             path.read_text(encoding="utf-8")

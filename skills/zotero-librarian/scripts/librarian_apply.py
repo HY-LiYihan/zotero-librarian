@@ -3,7 +3,7 @@
 
 This script is intentionally narrow. Use upstream `zot apply` for ordinary field,
 tag, collection, and Trash plans. Use this script only for top-level
-`setCreators` repairs plus optional tag changes in the same undoable snapshot.
+`setCreators` and `setItemType` repairs plus optional field/tag changes in the same undoable snapshot.
 """
 
 from __future__ import annotations
@@ -21,7 +21,18 @@ from typing import Any
 
 
 ITEM_KEY = re.compile(r"^[A-Z0-9]{8}$")
-ALLOWED_FIELDS = {"key", "setCreators", "addTags", "removeTags"}
+ALLOWED_FIELDS = {"key", "set", "setCreators", "setItemType", "addTags", "removeTags"}
+ALLOWED_ITEM_TYPES = {
+    "bookSection",
+    "conferencePaper",
+    "dataset",
+    "document",
+    "journalArticle",
+    "preprint",
+    "report",
+    "webpage",
+}
+UNSUPPORTED_SET_FIELDS = {"collections", "creators", "relations", "tags", "itemType"}
 
 
 class ApplyError(ValueError):
@@ -98,6 +109,18 @@ def validate_edits(edits: list[dict[str, Any]]) -> list[str]:
             seen_keys.add(key)
         if len(edit) == 1 and "key" in edit:
             errors.append(f"{prefix}: entry contains no change")
+        if "set" in edit:
+            values = edit["set"]
+            if not isinstance(values, dict) or not values:
+                errors.append(f"{prefix}: set must be a non-empty object")
+            else:
+                unsupported = set(values) & UNSUPPORTED_SET_FIELDS
+                if unsupported:
+                    errors.append(f"{prefix}: unsupported set fields: {', '.join(sorted(unsupported))}")
+        if "setItemType" in edit:
+            item_type = edit["setItemType"]
+            if not isinstance(item_type, str) or item_type not in ALLOWED_ITEM_TYPES:
+                errors.append(f"{prefix}: setItemType must be one of {sorted(ALLOWED_ITEM_TYPES)}")
         if "setCreators" in edit:
             creators = edit["setCreators"]
             if not isinstance(creators, list) or not creators:
@@ -126,6 +149,8 @@ def dry_run_summary(edits: list[dict[str, Any]]) -> dict[str, Any]:
         "operations": [
             {
                 "key": edit["key"],
+                "setItemType": edit.get("setItemType"),
+                "set": sorted(edit.get("set", {})),
                 "setCreators": len(edit.get("setCreators", [])),
                 "addTags": edit.get("addTags", []),
                 "removeTags": edit.get("removeTags", []),
@@ -167,11 +192,35 @@ def apply_edits(edits: list[dict[str, Any]]) -> dict[str, Any]:
     op_id = _snapshot(cfg, keys, "librarian-apply")
     code = (
         "var edits=%s; var lib=Zotero.Libraries.userLibraryID; var applied=0, errors=[];\n"
+        "function targetTypeID(it, e){\n"
+        "  if(!e.setItemType) return it.itemTypeID;\n"
+        "  var id = Zotero.ItemTypes.getID(e.setItemType);\n"
+        "  if(!id) throw new Error('invalid item type: '+e.setItemType);\n"
+        "  return id;\n"
+        "}\n"
+        "function validateSetFields(it, e){\n"
+        "  if(!e.set) return;\n"
+        "  var typeID = targetTypeID(it, e);\n"
+        "  for (var f in e.set){\n"
+        "    var fieldID = Zotero.ItemFields.getID(f);\n"
+        "    if(!fieldID) throw new Error('unknown field: '+f);\n"
+        "    if(Zotero.ItemFields.isBaseField(fieldID)){\n"
+        "      var mapped = Zotero.ItemFields.getFieldIDFromTypeAndBase(typeID, fieldID);\n"
+        "      if(mapped) fieldID = mapped;\n"
+        "    }\n"
+        "    if(!Zotero.ItemFields.isValidForType(fieldID, typeID)){\n"
+        "      throw new Error('field '+f+' is not valid for target item type');\n"
+        "    }\n"
+        "  }\n"
+        "}\n"
         "await Zotero.DB.executeTransaction(async function(){\n"
         "  for (var e of edits){\n"
         "    var it=await Zotero.Items.getByLibraryAndKeyAsync(lib, e.key);\n"
         "    if(!it){ errors.push(e.key+': not found'); continue; }\n"
         "    try {\n"
+        "      validateSetFields(it, e);\n"
+        "      if(e.setItemType){ it.setType(targetTypeID(it, e)); }\n"
+        "      if(e.set){ for(var f in e.set){ it.setField(f, e.set[f]); } }\n"
         "      if(e.setCreators){ it.setCreators(e.setCreators); }\n"
         "      if(e.addTags){ e.addTags.forEach(function(t){ it.addTag(t); }); }\n"
         "      if(e.removeTags){ e.removeTags.forEach(function(t){ it.removeTag(t); }); }\n"
@@ -219,6 +268,10 @@ def main() -> int:
         print(f"DRY-RUN — would apply {result['edits']} extended edit(s).")
         for operation in result["operations"][:5]:
             pieces = []
+            if operation["setItemType"]:
+                pieces.append(f"setItemType={operation['setItemType']}")
+            if operation["set"]:
+                pieces.append("set " + ",".join(operation["set"]))
             if operation["setCreators"]:
                 pieces.append(f"setCreators[{operation['setCreators']}]")
             if operation["addTags"]:

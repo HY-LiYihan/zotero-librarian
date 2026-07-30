@@ -31,6 +31,9 @@ ALLOWED_PLAN_FIELDS = {
 }
 FORBIDDEN_WORDS = {"erase", "eraseTx", "deletePermanently", "emptyTrash"}
 UNSUPPORTED_SET_FIELDS = {"collections", "creators", "relations", "tags"}
+DISALLOWED_SET_FIELDS_BY_TYPE = {
+    "webpage": {"bookTitle", "publicationTitle", "pages"},
+}
 
 
 class ValidationError(ValueError):
@@ -143,10 +146,34 @@ def validate_creator(value: Any) -> list[str]:
     return errors
 
 
+def load_item_types(path: Path | None) -> dict[str, str]:
+    if path is None:
+        return {}
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValidationError(f"cannot read library JSON: {exc}") from exc
+    if not isinstance(value, list):
+        raise ValidationError("library JSON must be the array from 'zot search ... --all --json'")
+    item_types: dict[str, str] = {}
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        data = item.get("data", {})
+        if not isinstance(data, dict):
+            continue
+        key = item.get("key") or data.get("key")
+        item_type = data.get("itemType")
+        if isinstance(key, str) and isinstance(item_type, str):
+            item_types[key] = item_type
+    return item_types
+
+
 def validate_plan_line(
     value: Any,
     line_number: int,
     taxonomy: dict[str, Any],
+    item_types: dict[str, str] | None = None,
 ) -> list[str]:
     prefix = f"line {line_number}"
     if not isinstance(value, dict):
@@ -171,6 +198,14 @@ def validate_plan_line(
                     f"{prefix}: unsupported set fields: {', '.join(sorted(unsupported))}; "
                     "use dedicated zot operations"
                 )
+            if isinstance(key, str) and item_types:
+                item_type = item_types.get(key)
+                disallowed = set(value["set"]) & DISALLOWED_SET_FIELDS_BY_TYPE.get(item_type or "", set())
+                if disallowed:
+                    errors.append(
+                        f"{prefix}: fields invalid for itemType {item_type!r}: "
+                        f"{', '.join(sorted(disallowed))}"
+                    )
     if "trash" in value and not isinstance(value["trash"], bool):
         errors.append(f"{prefix}: trash must be boolean")
     if "setCreators" in value:
@@ -218,7 +253,11 @@ def validate_plan_line(
     return errors
 
 
-def validate_plan(path: Path, taxonomy: dict[str, Any]) -> tuple[list[str], int, int]:
+def validate_plan(
+    path: Path,
+    taxonomy: dict[str, Any],
+    item_types: dict[str, str] | None = None,
+) -> tuple[list[str], int, int]:
     errors: list[str] = []
     count = 0
     trash_count = 0
@@ -236,7 +275,7 @@ def validate_plan(path: Path, taxonomy: dict[str, Any]) -> tuple[list[str], int,
         except json.JSONDecodeError as exc:
             errors.append(f"line {number}: invalid JSON: {exc.msg}")
             continue
-        errors.extend(validate_plan_line(value, number, taxonomy))
+        errors.extend(validate_plan_line(value, number, taxonomy, item_types))
         if isinstance(value, dict):
             key = value.get("key")
             if isinstance(key, str):
@@ -263,6 +302,11 @@ def main() -> int:
     plan_parser = sub.add_parser("plan", help="validate a zot apply JSONL plan")
     plan_parser.add_argument("file", type=Path)
     plan_parser.add_argument("--taxonomy", type=Path, required=True)
+    plan_parser.add_argument(
+        "--library-json",
+        type=Path,
+        help="optional full 'zot search --all --json' export for itemType-aware checks",
+    )
     args = parser.parse_args()
 
     try:
@@ -275,7 +319,11 @@ def main() -> int:
         return emit(not taxonomy_errors, taxonomy_errors, file=str(args.file))
     if taxonomy_errors:
         return emit(False, taxonomy_errors, file=str(args.file), taxonomy=str(args.taxonomy))
-    errors, entries, trash_entries = validate_plan(args.file, taxonomy)
+    try:
+        item_types = load_item_types(args.library_json)
+    except ValidationError as exc:
+        return emit(False, [str(exc)], file=str(args.file), taxonomy=str(args.taxonomy))
+    errors, entries, trash_entries = validate_plan(args.file, taxonomy, item_types)
     return emit(
         not errors,
         errors,

@@ -35,6 +35,8 @@ class ExtendedApplyTests(unittest.TestCase):
                 "operations": [
                     {
                         "key": "ABCD1234",
+                        "setItemType": None,
+                        "set": [],
                         "setCreators": 1,
                         "addTags": [],
                         "removeTags": ["status:metadata-conflict"],
@@ -43,6 +45,28 @@ class ExtendedApplyTests(unittest.TestCase):
             },
             apply_module.dry_run_summary(edits),
         )
+
+
+    def test_accepts_item_type_and_field_repairs(self) -> None:
+        edits = [
+            {
+                "key": "ABCD1234",
+                "setItemType": "bookSection",
+                "set": {"DOI": "10.1234/example", "bookTitle": "Proceedings"},
+                "removeTags": ["status:needs-review"],
+            }
+        ]
+        self.assertEqual([], apply_module.validate_edits(edits))
+        summary = apply_module.dry_run_summary(edits)
+        self.assertEqual("bookSection", summary["operations"][0]["setItemType"])
+        self.assertEqual(["DOI", "bookTitle"], summary["operations"][0]["set"])
+
+    def test_rejects_unsupported_set_and_item_type_fields(self) -> None:
+        errors = apply_module.validate_edits(
+            [{"key": "ABCD1234", "setItemType": "notAType", "set": {"creators": []}}]
+        )
+        self.assertTrue(any("setItemType must be one of" in error for error in errors))
+        self.assertTrue(any("unsupported set fields: creators" in error for error in errors))
 
     def test_rejects_upstream_apply_fields(self) -> None:
         errors = apply_module.validate_edits(

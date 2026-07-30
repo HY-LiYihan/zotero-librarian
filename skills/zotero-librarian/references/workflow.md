@@ -37,28 +37,31 @@ Do not place `creators`, `tags`, `collections`, or `relations` inside `set`.
 The generic field setter rejects these complex fields and may partially apply a
 mixed plan. Use dedicated tag and collection operations.
 
-For creator repairs, use a top-level `setCreators` list and apply it with the
-bundled extended applier, not upstream `zot apply`:
+For creator or item-type repairs, use top-level `setCreators` and `setItemType`
+fields and apply them with the bundled extended applier, not upstream `zot apply`:
 
 ```json
-{"key":"ABCD1234","setCreators":[{"creatorType":"author","firstName":"Ada","lastName":"Lovelace"}],"removeTags":["status:metadata-conflict"]}
+{"key":"ABCD1234","setItemType":"bookSection","set":{"bookTitle":"Proceedings"},"setCreators":[{"creatorType":"author","firstName":"Ada","lastName":"Lovelace"}],"removeTags":["status:metadata-conflict"]}
 ```
 
 `setCreators` must be grounded in authoritative metadata and must replace the
-complete creator list for that item. Do not guess partial authors.
+complete creator list for that item. `setItemType` must be paired with target-type
+valid fields; the extended applier validates fields before saving. Do not guess
+partial authors or item types.
 
 Validate before preview:
 
 ```bash
 python3 scripts/librarian_guard.py taxonomy taxonomy.toml
-python3 scripts/librarian_guard.py plan edits.jsonl --taxonomy taxonomy.toml
+zot search '' --all --json > library.json
+python3 scripts/librarian_guard.py plan edits.jsonl --taxonomy taxonomy.toml --library-json library.json
 zot apply edits.jsonl --dry-run --json
 ```
 
-For creator plans, preview with:
+For creator or item-type plans, preview with:
 
 ```bash
-python3 scripts/librarian_apply.py creator-edits.jsonl --dry-run --json
+python3 scripts/librarian_apply.py metadata-edits.jsonl --dry-run --json
 ```
 
 Present impact counts, ambiguous items, and a small representative sample. Do not silently create near-synonym tags or collections.
@@ -74,11 +77,11 @@ zot get <SAMPLE_KEY> --json
 zot apply edits.jsonl --yes --json
 ```
 
-For a creator plan, use the same backup/sample/verify pattern but replace
+For a creator or item-type plan, use the same backup/sample/verify pattern but replace
 `zot apply` with:
 
 ```bash
-python3 scripts/librarian_apply.py creator-sample.jsonl --yes --json
+python3 scripts/librarian_apply.py metadata-sample.jsonl --yes --json
 ```
 
 Keep the backup path and operation ID. Re-query affected items and verify exact field, tag, collection, attachment, note, or Trash state. On mismatch, stop and use `zot undo <operation-id>` where supported.
@@ -94,7 +97,8 @@ python3 scripts/library_audit.py library.json --expect-items <BASELINE>
 
 Use `--strict` only as a completion gate. It fails while actionable abstracts,
 missing topic tags, stale `status:needs-pdf` tags, webpages queued for PDFs, or
-unqueued scholarly PDFs remain. Fields explicitly tagged
+unqueued scholarly PDFs remain, and while any item still has `status:needs-review`.
+Fields explicitly tagged
 `status:abstract-not-applicable` are not counted
 as actionable abstract gaps. Use `status:abstract-unavailable` only after the
 configured authoritative providers have been checked and none exposes an

@@ -135,6 +135,10 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(["ABCD1234"], result["findings"]["webpageNeedsPdf"])
         self.assertEqual([], result["findings"]["unqueuedMissingPdf"])
 
+    def test_reports_items_marked_needs_review(self) -> None:
+        result = audit_module.audit([item("ABCD1234", tags=("topic:test", "status:needs-review"))])
+        self.assertEqual(["ABCD1234"], result["findings"]["needsReview"])
+
     def test_respects_date_and_creator_applicability_tags(self) -> None:
         value = item(
             "ABCD1234",

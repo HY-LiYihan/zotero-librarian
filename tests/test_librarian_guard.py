@@ -46,11 +46,11 @@ class TaxonomyTests(unittest.TestCase):
 
 
 class PlanTests(unittest.TestCase):
-    def validate_lines(self, text: str):
+    def validate_lines(self, text: str, item_types=None):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "plan.jsonl"
             path.write_text(text, encoding="utf-8")
-            return guard.validate_plan(path, VALID_TAXONOMY)
+            return guard.validate_plan(path, VALID_TAXONOMY, item_types)
 
     def test_accepts_safe_plan(self) -> None:
         errors, entries, trash_entries = self.validate_lines(
@@ -85,6 +85,14 @@ class PlanTests(unittest.TestCase):
             '{"key":"ABCD1234","set":{"creators":[{"lastName":"Example"}]}}\n'
         )
         self.assertTrue(any("unsupported set fields: creators" in error for error in errors))
+
+
+    def test_rejects_fields_invalid_for_known_item_type(self) -> None:
+        errors, _, _ = self.validate_lines(
+            '{"key":"ABCD1234","set":{"DOI":"10.1234/example","bookTitle":"Proceedings"}}\n',
+            {"ABCD1234": "webpage"},
+        )
+        self.assertTrue(any("fields invalid for itemType 'webpage': bookTitle" in error for error in errors))
 
     def test_rejects_malformed_set_creators(self) -> None:
         errors, _, _ = self.validate_lines(

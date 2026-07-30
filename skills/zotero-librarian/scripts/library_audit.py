@@ -69,6 +69,7 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
         "unqueuedMissingPdf": [],
         "actionableMissingAbstract": [],
         "abstractUnavailable": [],
+        "needsReview": [],
         "metadataConflict": [],
         "metadataConflictDocumented": [],
         "metadataConflictUndocumented": [],
@@ -97,6 +98,8 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
             and "status:needs-pdf" not in tags
         ):
             findings["unqueuedMissingPdf"].append(key)
+        if "status:needs-review" in tags:
+            findings["needsReview"].append(key)
         if "status:metadata-conflict" in tags:
             findings["metadataConflict"].append(key)
             if key in documented_conflicts:
@@ -149,6 +152,7 @@ def main() -> int:
             "webpageNeedsPdf",
             "unqueuedMissingPdf",
             "actionableMissingAbstract",
+            "needsReview",
             "metadataConflict",
             "missingDate",
             "missingCreators",

@@ -124,12 +124,23 @@ python3 scripts/conflict_report.py library.json identity-report.json \
 
 The decision report is read-only. It records the current Zotero identity, source
 identity, evidence, review-note state, and the safe options for user approval.
+Create a user-facing decision packet when the only remaining work is an identity
+choice:
+
+```bash
+python3 scripts/decision_packet.py library.json identity-report.json \
+  --expect-items <BASELINE> --output identity-decision.md
+```
+
 If the user approves treating a supported source identity as authoritative,
 generate a guarded candidate plan and still preview it before writing:
 
 ```bash
 python3 scripts/source_identity_plan.py library.json identity-report.json \
   --output source-identity-plan.jsonl --report source-identity-report.json
+python3 scripts/decision_packet.py library.json identity-report.json \
+  --expect-items <BASELINE> --source-plan-report source-identity-report.json \
+  --output identity-decision.md
 python3 scripts/librarian_apply.py source-identity-plan.jsonl --dry-run --json
 ```
 

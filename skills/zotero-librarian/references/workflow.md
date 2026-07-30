@@ -95,6 +95,19 @@ zot search '' --all --json > library.json
 python3 scripts/library_audit.py library.json --expect-items <BASELINE>
 ```
 
+For URL-backed identity checks, run the read-only identity auditor before
+metadata repairs. It compares the Zotero title against supported authoritative
+URL/DOI records such as ACL Anthology, PMLR, Crossref, and arXiv, and reports
+conflicts without writing a plan:
+
+```bash
+python3 scripts/identity_audit.py library.json --only-conflicts --workers 4
+python3 scripts/identity_audit.py library.json --keys <ITEM_KEY> --only-conflicts
+```
+
+The identity auditor checks DOI fields only when `--include-doi-field` is passed,
+because full-library Crossref scans are slower and should be deliberate.
+
 Use `--strict` only as a completion gate. It fails while actionable abstracts,
 missing topic tags, stale `status:needs-pdf` tags, webpages queued for PDFs, or
 unqueued scholarly PDFs remain, and while any item still has `status:needs-review`.

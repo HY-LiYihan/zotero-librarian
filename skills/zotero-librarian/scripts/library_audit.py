@@ -126,6 +126,40 @@ def audit(items: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def strict_errors(result: dict[str, Any], *, allow_documented_conflicts: bool = False) -> list[str]:
+    errors: list[str] = []
+    for field in (
+        "noTags",
+        "withoutTopic",
+        "staleNeedsPdf",
+        "webpageNeedsPdf",
+        "unqueuedMissingPdf",
+        "actionableMissingAbstract",
+        "missingDate",
+        "missingCreators",
+    ):
+        if result["counts"][field]:
+            errors.append(f"{field}: {result['counts'][field]}")
+
+    if allow_documented_conflicts:
+        documented = set(result["findings"]["metadataConflictDocumented"])
+        needs_review = [
+            key for key in result["findings"]["needsReview"] if key not in documented
+        ]
+        if needs_review:
+            errors.append(f"needsReview: {len(needs_review)}")
+        if result["counts"]["metadataConflictUndocumented"]:
+            errors.append(
+                f"metadataConflictUndocumented: "
+                f"{result['counts']['metadataConflictUndocumented']}"
+            )
+    else:
+        for field in ("needsReview", "metadataConflict"):
+            if result["counts"][field]:
+                errors.append(f"{field}: {result['counts'][field]}")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("input", type=Path)
@@ -134,6 +168,15 @@ def main() -> int:
         "--strict",
         action="store_true",
         help="fail on tag/PDF queue inconsistencies or actionable missing abstracts",
+    )
+    parser.add_argument(
+        "--allow-documented-conflicts",
+        action="store_true",
+        help=(
+            "with --strict, allow items whose only remaining review state is a "
+            "documented metadata conflict; this is an automation-completeness gate, "
+            "not a full library-completion gate"
+        ),
     )
     args = parser.parse_args()
     try:
@@ -145,20 +188,12 @@ def main() -> int:
     if args.expect_items is not None and result["parents"] != args.expect_items:
         errors.append(f"expected {args.expect_items} parent items, found {result['parents']}")
     if args.strict:
-        for field in (
-            "noTags",
-            "withoutTopic",
-            "staleNeedsPdf",
-            "webpageNeedsPdf",
-            "unqueuedMissingPdf",
-            "actionableMissingAbstract",
-            "needsReview",
-            "metadataConflict",
-            "missingDate",
-            "missingCreators",
-        ):
-            if result["counts"][field]:
-                errors.append(f"{field}: {result['counts'][field]}")
+        errors.extend(
+            strict_errors(
+                result,
+                allow_documented_conflicts=args.allow_documented_conflicts,
+            )
+        )
     print(json.dumps({"ok": not errors, **result, "errors": errors}, ensure_ascii=False, indent=2))
     return 0 if not errors else 1
 

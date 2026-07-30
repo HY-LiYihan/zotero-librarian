@@ -108,9 +108,13 @@ enrichment. Tag title/creator/year/DOI/URL identity disagreements with
 are resolved. If a conflict cannot be safely resolved, add a child note titled
 or beginning with `Zotero Librarian metadata conflict audit` that records the
 checked sources and decision; the auditor reports these as documented without
-hiding the strict failure. Likewise, use `status:date-not-applicable` and
-`status:creator-not-applicable` only when the item genuinely has no such field;
-the auditor otherwise treats missing dates and creators as strict failures.
+hiding the strict failure. Use `--strict --allow-documented-conflicts` only as an
+automation-completeness gate after all actionable fixes are done; it may pass
+when the only remaining `status:needs-review` items are documented metadata
+conflicts, but it is not a full library-completion gate. Likewise, use
+`status:date-not-applicable` and `status:creator-not-applicable` only when the
+item genuinely has no such field; the auditor otherwise treats missing dates and
+creators as strict failures.
 
 ## Special Cases
 

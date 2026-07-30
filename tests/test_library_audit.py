@@ -117,6 +117,59 @@ class AuditTests(unittest.TestCase):
         self.assertEqual(["ABCD1234"], result["findings"]["metadataConflictDocumented"])
         self.assertEqual(["EFGH5678"], result["findings"]["metadataConflictUndocumented"])
 
+    def test_strict_errors_can_separate_documented_conflicts_from_automation_gaps(self) -> None:
+        result = audit_module.audit(
+            [
+                item(
+                    "ABCD1234",
+                    tags=(
+                        "topic:test",
+                        "status:metadata-conflict",
+                        "status:needs-review",
+                        "status:needs-pdf",
+                    ),
+                ),
+                note(
+                    "NOTE1234",
+                    "ABCD1234",
+                    "<p>Zotero Librarian metadata conflict audit: current URL mismatch.</p>",
+                ),
+            ]
+        )
+        self.assertEqual(
+            ["needsReview: 1", "metadataConflict: 1"],
+            audit_module.strict_errors(result),
+        )
+        self.assertEqual(
+            [],
+            audit_module.strict_errors(result, allow_documented_conflicts=True),
+        )
+
+    def test_documented_conflict_allowance_does_not_hide_other_review_items(self) -> None:
+        result = audit_module.audit(
+            [
+                item(
+                    "ABCD1234",
+                    tags=(
+                        "topic:test",
+                        "status:metadata-conflict",
+                        "status:needs-review",
+                        "status:needs-pdf",
+                    ),
+                ),
+                item("EFGH5678", tags=("topic:test", "status:needs-review", "status:needs-pdf")),
+                note(
+                    "NOTE1234",
+                    "ABCD1234",
+                    "<p>Zotero Librarian metadata conflict audit: current URL mismatch.</p>",
+                ),
+            ]
+        )
+        self.assertEqual(
+            ["needsReview: 1"],
+            audit_module.strict_errors(result, allow_documented_conflicts=True),
+        )
+
     def test_reports_missing_topic_and_unqueued_pdf(self) -> None:
         result = audit_module.audit([item("ABCD1234", tags=("priority:high",))])
         self.assertEqual(["ABCD1234"], result["findings"]["withoutTopic"])

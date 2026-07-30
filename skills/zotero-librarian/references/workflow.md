@@ -93,7 +93,12 @@ the parent count and checks topic coverage plus PDF queue consistency:
 ```bash
 zot search '' --all --json > library.json
 python3 scripts/library_audit.py library.json --expect-items <BASELINE>
+python3 scripts/goal_status.py library.json --expect-items <BASELINE>
 ```
+
+Use `goal_status.py` in final checks. It separately reports the full strict gate,
+the automation-complete gate, parent-count invariance, and any documented
+metadata conflicts that still require a human identity decision.
 
 For URL-backed identity checks, run the read-only identity auditor before
 metadata repairs. It compares the Zotero title against supported authoritative

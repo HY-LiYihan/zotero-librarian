@@ -5,7 +5,7 @@ description: Safely audit, organize, classify, read, and maintain a running Zote
 
 # Zotero Librarian
 
-Treat the user's Zotero library as durable research data. Use `zot` for all Zotero access; do not use the Zotero Web API, edit `zotero.sqlite`, or invent a second storage path.
+Treat the user's Zotero library as durable research data. Use `zot` and the bundled Librarian scripts for Zotero access; do not use the Zotero Web API, edit `zotero.sqlite`, execute arbitrary JavaScript, or invent a second storage path.
 
 ## Start Safely
 

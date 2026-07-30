@@ -60,6 +60,16 @@ class PlanTests(unittest.TestCase):
         self.assertEqual(1, entries)
         self.assertEqual(0, trash_entries)
 
+    def test_accepts_top_level_set_creators(self) -> None:
+        errors, entries, _ = self.validate_lines(
+            '{"key":"ABCD1234","setCreators":['
+            '{"creatorType":"author","firstName":"Ada","lastName":"Lovelace"},'
+            '{"creatorType":"author","name":"Example Consortium"}],'
+            '"removeTags":["status:metadata-conflict"]}\n'
+        )
+        self.assertEqual([], errors)
+        self.assertEqual(1, entries)
+
     def test_accepts_trash_only(self) -> None:
         errors, _, trash_entries = self.validate_lines('{"key":"ABCD1234","trash":true}\n')
         self.assertEqual([], errors)
@@ -75,6 +85,15 @@ class PlanTests(unittest.TestCase):
             '{"key":"ABCD1234","set":{"creators":[{"lastName":"Example"}]}}\n'
         )
         self.assertTrue(any("unsupported set fields: creators" in error for error in errors))
+
+    def test_rejects_malformed_set_creators(self) -> None:
+        errors, _, _ = self.validate_lines(
+            '{"key":"ABCD1234","setCreators":[{"firstName":"Ada"},'
+            '{"creatorType":"author","name":"Team","lastName":"Team"}]}\n'
+        )
+        self.assertTrue(any("creatorType must be a non-empty string" in error for error in errors))
+        self.assertTrue(any("lastName must be a non-empty string" in error for error in errors))
+        self.assertTrue(any("must not mix name" in error for error in errors))
 
     def test_rejects_conflicting_exclusive_tags(self) -> None:
         errors, _, _ = self.validate_lines(

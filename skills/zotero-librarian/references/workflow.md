@@ -35,8 +35,17 @@ Write one JSON object per item. Use only the upstream `zot apply` fields:
 
 Do not place `creators`, `tags`, `collections`, or `relations` inside `set`.
 The generic field setter rejects these complex fields and may partially apply a
-mixed plan. Use dedicated tag and collection operations. Leave creator fixes in
-`status:needs-review` until the installed backend exposes a supported command.
+mixed plan. Use dedicated tag and collection operations.
+
+For creator repairs, use a top-level `setCreators` list and apply it with the
+bundled extended applier, not upstream `zot apply`:
+
+```json
+{"key":"ABCD1234","setCreators":[{"creatorType":"author","firstName":"Ada","lastName":"Lovelace"}],"removeTags":["status:metadata-conflict"]}
+```
+
+`setCreators` must be grounded in authoritative metadata and must replace the
+complete creator list for that item. Do not guess partial authors.
 
 Validate before preview:
 
@@ -44,6 +53,12 @@ Validate before preview:
 python3 scripts/librarian_guard.py taxonomy taxonomy.toml
 python3 scripts/librarian_guard.py plan edits.jsonl --taxonomy taxonomy.toml
 zot apply edits.jsonl --dry-run --json
+```
+
+For creator plans, preview with:
+
+```bash
+python3 scripts/librarian_apply.py creator-edits.jsonl --dry-run --json
 ```
 
 Present impact counts, ambiguous items, and a small representative sample. Do not silently create near-synonym tags or collections.
@@ -57,6 +72,13 @@ zot backup
 zot apply sample.jsonl --yes --json
 zot get <SAMPLE_KEY> --json
 zot apply edits.jsonl --yes --json
+```
+
+For a creator plan, use the same backup/sample/verify pattern but replace
+`zot apply` with:
+
+```bash
+python3 scripts/librarian_apply.py creator-sample.jsonl --yes --json
 ```
 
 Keep the backup path and operation ID. Re-query affected items and verify exact field, tag, collection, attachment, note, or Trash state. On mismatch, stop and use `zot undo <operation-id>` where supported.

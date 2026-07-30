@@ -25,6 +25,7 @@ ALLOWED_PLAN_FIELDS = {
     "set",
     "addTags",
     "removeTags",
+    "setCreators",
     "addToCollection",
     "trash",
 }
@@ -115,6 +116,33 @@ def validate_tag(tag: Any, prefixes: set[str], allow_unprefixed: bool) -> str | 
     return None
 
 
+def validate_creator(value: Any) -> list[str]:
+    if not isinstance(value, dict):
+        return ["creator entries must be objects"]
+    allowed = {"creatorType", "firstName", "lastName", "name"}
+    errors: list[str] = []
+    unknown = set(value) - allowed
+    if unknown:
+        errors.append(f"unsupported creator fields: {', '.join(sorted(unknown))}")
+    creator_type = value.get("creatorType")
+    if not isinstance(creator_type, str) or not creator_type.strip():
+        errors.append("creatorType must be a non-empty string")
+    has_name = "name" in value
+    has_parts = "firstName" in value or "lastName" in value
+    if has_name and has_parts:
+        errors.append("single-field creators must not mix name with firstName/lastName")
+    if has_name:
+        if not isinstance(value.get("name"), str) or not value.get("name", "").strip():
+            errors.append("name must be a non-empty string")
+    else:
+        last_name = value.get("lastName")
+        if not isinstance(last_name, str) or not last_name.strip():
+            errors.append("lastName must be a non-empty string")
+        if "firstName" in value and not isinstance(value.get("firstName"), str):
+            errors.append("firstName must be a string when present")
+    return errors
+
+
 def validate_plan_line(
     value: Any,
     line_number: int,
@@ -145,6 +173,14 @@ def validate_plan_line(
                 )
     if "trash" in value and not isinstance(value["trash"], bool):
         errors.append(f"{prefix}: trash must be boolean")
+    if "setCreators" in value:
+        creators = value["setCreators"]
+        if not isinstance(creators, list) or not creators:
+            errors.append(f"{prefix}: setCreators must be a non-empty list")
+        else:
+            for index, creator in enumerate(creators, 1):
+                for error in validate_creator(creator):
+                    errors.append(f"{prefix}: setCreators[{index}]: {error}")
     if "addToCollection" in value and (
         not isinstance(value["addToCollection"], str) or not value["addToCollection"].strip()
     ):

@@ -87,7 +87,7 @@ the auditor otherwise treats missing dates and creators as strict failures.
 - Duplicate merge: run exact DOI and title detection before fuzzy detection. For every group, compare DOI/ISBN/arXiv ID, title, creators, year, item type, fields, tags, collections, notes, and attachments. The upstream merge always keeps the oldest item as master and merges every group in the selected scope. Use `zot dedupe --merge` only when the user approves every reported group and accepts the oldest master for each. Otherwise stop and direct the user to merge the selected group in Zotero's Duplicate Items UI; do not use `zot exec` to bypass this limit. Immediately before an approved merge, disable auto-sync, run `zot backup`, re-run the same scoped detection, and confirm the groups are unchanged. After merging, verify the master retains expected metadata, tags, collections, notes, and attachments, then let the user re-enable sync. A merge has no `zot undo`; recovery requires restoring the printed database backup.
 - Deletion: set `trash: true`; never erase or empty Trash.
 - New collections: preview names and parents, reject case-insensitive duplicates, then create them before applying item membership plans.
-- Enrichment: dry-run Crossref/OpenAlex candidates and retain source identifiers. Do not overwrite non-empty conflicting metadata automatically.
+- Enrichment: use the bundled strict enricher for completion work; do not rely on upstream `zot enrich` candidates unless they have also passed title, year, DOI, or source-identifier checks. Dry-run candidates and retain source identifiers. Do not overwrite non-empty conflicting metadata automatically.
 - Large jobs: split into reviewable batches and verify each batch before continuing.
 
 For missing abstracts, the bundled plan generator reads exported Zotero JSON and
@@ -103,7 +103,11 @@ zot apply abstracts.jsonl --dry-run --json
 It fills empty abstracts only, uses deterministic arXiv, Crossref, DOI-addressed
 Semantic Scholar, ACL Anthology, PMLR, official-document, and identity-checked
 OpenAlex sources, and rejects title, year, or source-identifier mismatches. Review
-its report before applying.
+its report before applying; rejected rows include the candidate title, source, and
+available identifiers so the Agent can explain why nothing was written. If a
+linked source is itself a mismatch, keep `status:metadata-conflict` and use
+`status:abstract-unavailable` only after the configured providers fail to attach
+an abstract to the current item identity.
 
 The same script can derive DOI values only when the existing URL makes the DOI
 deterministic. It does not perform fuzzy title lookup:

@@ -14,7 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -52,6 +52,7 @@ class Metadata:
     title: str
     abstract: str
     source: str
+    evidence: dict[str, str] = field(default_factory=dict)
 
 
 def normalize_title(value: str) -> str:
@@ -118,7 +119,7 @@ def fetch_arxiv(item: dict[str, Any], timeout: float) -> Metadata | None:
         return None
     title = " ".join((entry.findtext("atom:title", default="", namespaces=ns)).split())
     abstract = clean_abstract(entry.findtext("atom:summary", default="", namespaces=ns))
-    return Metadata(title, abstract, "arXiv") if title and abstract else None
+    return Metadata(title, abstract, "arXiv", {"arxivId": identifier}) if title and abstract else None
 
 
 def fetch_crossref(item: dict[str, Any], timeout: float) -> Metadata | None:
@@ -134,7 +135,7 @@ def fetch_crossref(item: dict[str, Any], timeout: float) -> Metadata | None:
     titles = message.get("title", [])
     title = str(titles[0]) if isinstance(titles, list) and titles else ""
     abstract = clean_abstract(str(message.get("abstract") or ""))
-    return Metadata(title, abstract, "Crossref") if title and abstract else None
+    return Metadata(title, abstract, "Crossref", {"doi": doi}) if title and abstract else None
 
 
 def fetch_semantic_scholar(item: dict[str, Any], timeout: float) -> Metadata | None:
@@ -159,7 +160,10 @@ def fetch_semantic_scholar(item: dict[str, Any], timeout: float) -> Metadata | N
     candidate_year = str(payload.get("year") or "")
     if expected_year and candidate_year and expected_year != candidate_year:
         return None
-    return Metadata(title, abstract, "Semantic Scholar") if title and abstract else None
+    evidence = {"doi": doi}
+    if candidate_year:
+        evidence["year"] = candidate_year
+    return Metadata(title, abstract, "Semantic Scholar", evidence) if title and abstract else None
 
 
 def openalex_abstract(inverted_index: Any) -> str:
@@ -199,19 +203,44 @@ def fetch_openalex(item: dict[str, Any], timeout: float) -> Metadata | None:
             continue
         candidate_doi = str(work.get("doi") or "").removeprefix("https://doi.org/").casefold()
         locations = work.get("locations") if isinstance(work.get("locations"), list) else []
-        location_urls = " ".join(
-            str(location.get(field) or "").casefold()
+        landing_urls = [
+            str(location.get("landing_page_url") or "")
             for location in locations
-            if isinstance(location, dict)
-            for field in ("landing_page_url", "pdf_url")
-        )
+            if isinstance(location, dict) and location.get("landing_page_url")
+        ]
+        pdf_urls = [
+            str(location.get("pdf_url") or "")
+            for location in locations
+            if isinstance(location, dict) and location.get("pdf_url")
+        ]
+        location_urls = " ".join(url.casefold() for url in landing_urls + pdf_urls)
         if expected_doi and candidate_doi != expected_doi:
             continue
         if expected_acl_id and expected_acl_id not in candidate_doi and expected_acl_id not in location_urls:
             continue
         abstract = openalex_abstract(work.get("abstract_inverted_index"))
         if abstract:
-            candidates.append(Metadata(candidate_title, abstract, "OpenAlex"))
+            evidence = {
+                "openalexId": str(work.get("id") or ""),
+                "publicationYear": candidate_year,
+                "matchBasis": ",".join(
+                    basis
+                    for basis, present in (
+                        ("title", True),
+                        ("year", bool(expected_year)),
+                        ("doi", bool(expected_doi)),
+                        ("aclId", bool(expected_acl_id)),
+                    )
+                    if present
+                ),
+            }
+            if candidate_doi:
+                evidence["doi"] = candidate_doi
+            if landing_urls:
+                evidence["landingPageUrl"] = landing_urls[0]
+            if pdf_urls:
+                evidence["pdfUrl"] = pdf_urls[0]
+            candidates.append(Metadata(candidate_title, abstract, "OpenAlex", evidence))
     return candidates[0] if len(candidates) == 1 else None
 
 
@@ -234,7 +263,10 @@ def fetch_html_meta(item: dict[str, Any], timeout: float) -> Metadata | None:
     match = pattern.search(page)
     abstract = metadata.get("citation_abstract") or (match.group(1) if match else "")
     abstract = clean_abstract(abstract)
-    return Metadata(title, abstract, source) if title and abstract else None
+    evidence = {"url": url}
+    if acl:
+        evidence["aclId"] = acl.group(1)
+    return Metadata(title, abstract, source, evidence) if title and abstract else None
 
 
 def fetch_official_description(item: dict[str, Any], timeout: float) -> Metadata | None:
@@ -250,7 +282,7 @@ def fetch_official_description(item: dict[str, Any], timeout: float) -> Metadata
     description = clean_abstract(description)
     if not title or not description or len(description) < 40:
         return None
-    return Metadata(title, description, "official page")
+    return Metadata(title, description, "official page", {"url": url})
 
 
 PROVIDERS: tuple[Callable[[dict[str, Any], float], Metadata | None], ...] = (
@@ -276,9 +308,9 @@ def load_items(path: Path) -> list[dict[str, Any]]:
 
 def build_plan(
     items: list[dict[str, Any]], *, timeout: float, delay: float
-) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     plan: list[dict[str, Any]] = []
-    report: list[dict[str, str]] = []
+    report: list[dict[str, Any]] = []
     for item in items:
         key, title = str(item.get("key") or ""), str(item.get("title") or "")
         if item.get("abstractNote"):
@@ -298,10 +330,28 @@ def build_plan(
             report.append({"key": key, "status": "unresolved", "reason": last_error})
             continue
         if not titles_match(title, metadata.title):
-            report.append({"key": key, "status": "rejected", "reason": f"title mismatch from {metadata.source}"})
+            entry: dict[str, Any] = {
+                "key": key,
+                "status": "rejected",
+                "reason": "title mismatch",
+                "source": metadata.source,
+                "expectedTitle": title,
+                "candidateTitle": metadata.title,
+            }
+            if metadata.evidence:
+                entry["evidence"] = metadata.evidence
+            report.append(entry)
             continue
         plan.append({"key": key, "set": {"abstractNote": metadata.abstract}})
-        report.append({"key": key, "status": "planned", "source": metadata.source})
+        entry = {
+            "key": key,
+            "status": "planned",
+            "source": metadata.source,
+            "candidateTitle": metadata.title,
+        }
+        if metadata.evidence:
+            entry["evidence"] = metadata.evidence
+        report.append(entry)
         if delay:
             time.sleep(delay)
     return plan, report

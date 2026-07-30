@@ -91,13 +91,20 @@ class ProviderTests(unittest.TestCase):
     def test_openalex_reconstructs_abstract_and_checks_year(self, request_text) -> None:
         request_text.return_value = (
             '{"results":[{"display_name":"A Sufficiently Specific Example Paper Title",'
-            '"publication_year":2024,"abstract_inverted_index":'
+            '"id":"https://openalex.org/W123","doi":"https://doi.org/10.1234/example",'
+            '"publication_year":2024,'
+            '"locations":[{"landing_page_url":"https://publisher.example/paper",'
+            '"pdf_url":"https://publisher.example/paper.pdf"}],'
+            '"abstract_inverted_index":'
             '{"Useful":[0],"abstract":[1],"text.":[2]}}]}'
         )
         result = enricher.fetch_openalex(
             {"title": "A Sufficiently Specific Example Paper Title", "year": "2024"}, 1
         )
         self.assertEqual("Useful abstract text.", result.abstract)
+        self.assertEqual("https://openalex.org/W123", result.evidence["openalexId"])
+        self.assertEqual("10.1234/example", result.evidence["doi"])
+        self.assertEqual("title,year", result.evidence["matchBasis"])
 
     @patch.object(enricher, "request_text")
     def test_openalex_rejects_generic_or_year_mismatched_titles(self, request_text) -> None:
@@ -185,6 +192,30 @@ class PlanTests(unittest.TestCase):
             plan, report = enricher.build_plan(items, timeout=1, delay=0)
         self.assertEqual([{"key": "ABCD1234", "set": {"abstractNote": "Official abstract."}}], plan)
         self.assertEqual(["planned", "skipped", "rejected"], [entry["status"] for entry in report])
+
+    def test_rejection_report_keeps_candidate_identity_evidence(self) -> None:
+        items = [{"key": "ABCD1234", "title": "Expected Paper"}]
+        metadata = enricher.Metadata(
+            "Different Official Paper",
+            "Official abstract.",
+            "ACL Anthology",
+            {"aclId": "L12-1459", "url": "https://aclanthology.org/L12-1459/"},
+        )
+        with patch.object(enricher, "PROVIDERS", (lambda item, timeout: metadata,)):
+            plan, report = enricher.build_plan(items, timeout=1, delay=0)
+        self.assertEqual([], plan)
+        self.assertEqual(
+            {
+                "key": "ABCD1234",
+                "status": "rejected",
+                "reason": "title mismatch",
+                "source": "ACL Anthology",
+                "expectedTitle": "Expected Paper",
+                "candidateTitle": "Different Official Paper",
+                "evidence": {"aclId": "L12-1459", "url": "https://aclanthology.org/L12-1459/"},
+            },
+            report[0],
+        )
 
     def test_builds_only_deterministic_doi_updates(self) -> None:
         items = [

@@ -47,6 +47,19 @@ class RepositoryTests(unittest.TestCase):
         for forbidden in ("/Users/", "18040906", "RLToken", "Robot Learning"):
             self.assertNotIn(forbidden, text)
 
+    def test_embedded_skill_matches_canonical_skill(self) -> None:
+        canonical = ROOT / "skills" / "zotero-librarian"
+        embedded = ROOT / "src" / "zotero_librarian" / "resources" / "skills" / "zotero-librarian"
+        canonical_files = sorted(path.relative_to(canonical) for path in canonical.rglob("*") if path.is_file())
+        embedded_files = sorted(path.relative_to(embedded) for path in embedded.rglob("*") if path.is_file())
+        self.assertEqual(canonical_files, embedded_files)
+        for relative in canonical_files:
+            self.assertEqual(
+                (canonical / relative).read_text(encoding="utf-8"),
+                (embedded / relative).read_text(encoding="utf-8"),
+                str(relative),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

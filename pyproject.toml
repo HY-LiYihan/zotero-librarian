@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zotero-librarian"
+version = "0.1.0"
+description = "Safety-first CLI and Agent skill for maintaining local Zotero Desktop libraries"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "HY-LiYihan", email = "liyihan.xyz@gmail.com" }]
+keywords = ["zotero", "agent", "cli", "research", "bibliography"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+dependencies = ["tomli>=2.0.1; python_version < '3.11'"]
+
+[project.urls]
+Homepage = "https://github.com/HY-LiYihan/zotero-librarian"
+Repository = "https://github.com/HY-LiYihan/zotero-librarian"
+Issues = "https://github.com/HY-LiYihan/zotero-librarian/issues"
+
+[project.scripts]
+zotero-librarian = "zotero_librarian.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+zotero_librarian = ["resources/skills/zotero-librarian/**/*"]

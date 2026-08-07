@@ -1,26 +1,26 @@
 # Zotero Librarian
 
-Zotero Librarian is a safety-first workflow skill for agents that organize and maintain a local Zotero library. It adds taxonomy design, library audits, reviewable JSONL change plans, PDF-reading workflows, and explicit backup/undo rules on top of [`zotero-agent`](https://github.com/alex-roc/zotero-agent).
+Zotero Librarian is a release-ready Python CLI and companion Agent skill for safely auditing, organizing, and maintaining a local Zotero Desktop library. It builds a lark-cli-style command layer on top of the MIT-licensed [`zotero-agent`](https://github.com/alex-roc/zotero-agent) backend: high-level commands, stable JSON, dry-run-first edits, embedded skill resources, and explicit backup/undo rules.
 
 [简体中文](README.zh-CN.md)
 
 ## Why this project
 
-`zotero-agent` already provides the hard part: fast local reads and authenticated writes inside a running Zotero process. Zotero Librarian deliberately does not replace that bridge. It tells an Agent how to turn those primitives into a controlled library-maintenance process:
+`zotero-agent` already handles local Zotero reads and authenticated bridge writes inside a running Zotero process. Zotero Librarian deliberately does not replace that bridge. It turns those primitives into repeatable Agent workflows:
 
 - audit collections, tags, metadata, duplicates, and attachments;
-- classify papers with a user-owned taxonomy;
-- preview and validate batch edits before applying them;
+- generate reviewable JSONL edit plans with policy validation;
+- classify papers using a user-owned taxonomy;
+- repair metadata only when source identity is verified;
 - maintain reading queues and write evidence-based notes;
-- import stored attachments for Zotero Desktop/WebDAV synchronization;
-- move items to Trash, with backups and undo where supported.
+- move items to Trash with backups and undo where supported.
 
 ## Requirements
 
-- Zotero Desktop 7-9, running locally
+- Zotero Desktop 7-9, running locally for live operations
 - Python 3.9+
-- [`zotero-agent`](https://github.com/alex-roc/zotero-agent) CLI and bridge XPI
-- `tomli` only when running the plan guard on Python 3.9-3.10
+- `zotero-agent` CLI and bridge XPI
+- `uv`, `pipx`, or `pip` for local installation
 
 Install and verify the backend first:
 
@@ -30,53 +30,104 @@ zot init
 zot ping
 ```
 
-Download the bridge XPI from the upstream `zotero-agent` release. Review its security documentation before installation.
+Download the bridge XPI from the upstream `zotero-agent` release and review its security notes before installation.
 
-## Install the skill
+## Install
+
+From a cloned repository, install the release-ready CLI locally:
 
 ```bash
 git clone https://github.com/HY-LiYihan/zotero-librarian.git
 cd zotero-librarian
+python3 -m pip install -e .
+zotero-librarian --json doctor --offline
+```
+
+After PyPI publication, the intended entrypoint is:
+
+```bash
+uvx zotero-librarian --help
+```
+
+Install the embedded Agent skill from the same CLI build:
+
+```bash
+zotero-librarian skills install --codex
+zotero-librarian skills install --claude
+```
+
+The legacy installer remains available for users who only want to copy the skill:
+
+```bash
 ./install.sh --codex
 ```
 
-For Claude Code use `./install.sh --claude`. Pass both flags to install for both clients. The canonical skill remains in `skills/zotero-librarian/`.
-
-## Use
-
-Invoke `$zotero-librarian` and describe the desired outcome, for example:
-
-- "Audit my Inbox and propose a taxonomy without changing the library."
-- "Classify this collection using my taxonomy, preview the plan, then wait."
-- "Find duplicate papers and show merge evidence."
-- "Summarize this PDF with page references and draft a Zotero child note."
-- "Move these exact item keys to Trash after backup and dry-run."
-
-Validate the included examples:
+## Agent quickstart
 
 ```bash
-python3 skills/zotero-librarian/scripts/librarian_guard.py taxonomy taxonomy.example.toml
-python3 skills/zotero-librarian/scripts/librarian_guard.py plan \
-  examples/edits.example.jsonl --taxonomy taxonomy.example.toml
+zotero-librarian --json doctor
+zotero-librarian --json library export --out library.json
+zotero-librarian --json library status library.json --expect-items 229
+zotero-librarian --json library audit library.json --strict
 ```
 
-The guard validates policy and shape only. Scientific classification remains the Agent's responsibility and must be grounded in item metadata or PDF evidence.
+For identity conflicts:
+
+```bash
+zotero-librarian --json identity audit library.json --only-conflicts --workers 4 --output identity.json
+zotero-librarian identity report library.json identity.json --output conflicts.md
+zotero-librarian identity decision library.json identity.json --expect-items 229 --output decision.md
+zotero-librarian --json identity plan library.json identity.json --output source-plan.jsonl --report source-plan.json
+zotero-librarian --json plan preview source-plan.jsonl --extended
+```
+
+For reviewed writes:
+
+```bash
+zotero-librarian --json plan validate edits.jsonl --taxonomy taxonomy.example.toml
+zotero-librarian --json plan preview edits.jsonl
+zotero-librarian --json plan sample edits.jsonl --out sample.jsonl --count 2
+zotero-librarian --json plan apply edits.jsonl --yes
+```
+
+`plan apply` runs `zot backup` before applying. Extended creator or item-type repairs use `--extended` and the guarded applier that originated as `librarian_apply.py`.
+
+## Command map
+
+- `doctor`: check package, config, embedded skill, `zot`, and bridge readiness.
+- `schema plan|audit|status`: show stable JSON shapes for Agents.
+- `skills list|read|install`: inspect and install the embedded companion skill.
+- `library export|audit|status`: export the library and run completion gates.
+- `identity audit|report|decision|plan`: detect metadata identity conflicts and build guarded repair plans.
+- `metadata enrich`: generate abstract or DOI plans without writing to Zotero.
+- `plan validate|preview|sample|apply`: validate, dry-run, sample, and apply JSONL changes.
+- `item get|pdf|notes`: read exact item metadata, PDF path, or child notes.
+- `raw zot -- ...`: escape hatch for direct `zot` commands; known writes require `--allow-write`, and `zot exec` is always refused.
+
+## JSON policy
+
+Use `--json` whenever an Agent will parse output. JSON commands emit JSON to stdout only; diagnostics and subprocess failures go to stderr or into a sanitized error envelope:
+
+```json
+{"ok":false,"error":{"code":"confirmation_required","message":"refusing to write without --yes; run plan preview first","details":{}}}
+```
+
+Commands never print bridge tokens, Zotero API keys, WebDAV credentials, private env files, live library exports from unrelated paths, or complete private config contents.
 
 ## Completion gates
 
-Use `goal_status.py` as the final whole-library gate after an audit or cleanup:
+The CLI wraps the same checks previously exposed by `library_audit.py` and `goal_status.py`:
 
 ```bash
-zot search '' --all --json > library.json
-python3 skills/zotero-librarian/scripts/goal_status.py library.json --expect-items <BASELINE>
+zotero-librarian --json library status library.json --expect-items <BASELINE>
 ```
 
-The status report separates two states:
+The status report separates:
 
 - `automationComplete`: no remaining actionable missing tags, metadata, PDF queue issues, or parent-count drift.
-- `fullComplete`: the stricter state where no documented metadata conflict or manual review item remains.
+- `fullComplete`: no documented metadata conflict or manual review item remains.
 
-If `automationComplete` is true but `fullComplete` is false, the Agent must stop and ask for an explicit identity decision. Use `identity_audit.py`, `conflict_report.py`, and, only after user approval, `source_identity_plan.py` to prepare a dry-run repair plan. Do not turn a documented conflict into a write automatically.
+If `automationComplete` is true but `fullComplete` is false, the Agent must stop for a user identity decision. Use `identity audit`, `identity report`, `identity decision`, and only after user approval `identity plan`. This replaces the direct script sequence around `source_identity_plan.py` while keeping the script available for compatibility.
 
 ## Safety boundary
 
@@ -84,19 +135,31 @@ If `automationComplete` is true but `fullComplete` is false, the Agent must stop
 - No direct `zotero.sqlite` writes.
 - No permanent deletion or Trash emptying.
 - No arbitrary JavaScript endpoint is added by this project.
-- Batch operations are dry-run first, backed up, sampled, verified, and undoable where the backend supports it.
+- Batch operations are dry-run first, backed up, sampled when appropriate, verified, and undoable where the backend supports it.
 - PDFs are imported locally as Zotero stored attachments; Zotero Desktop applies the user's configured WebDAV or storage policy.
+- v1 does not ship an MCP server.
 
 See [SECURITY.md](SECURITY.md) for the trust boundary and reporting process.
 
 ## Development
 
 ```bash
+python3 -m pip install -e .
 python3 -m unittest discover -s tests -v
 python3 /path/to/skill-creator/scripts/quick_validate.py skills/zotero-librarian
+python3 -m build
 ```
 
-The test suite does not access a live Zotero library. Live forward tests must use a disposable test library.
+Smoke-test from another directory before release:
+
+```bash
+cd /tmp
+zotero-librarian --help
+zotero-librarian --json doctor --offline
+zotero-librarian --json schema plan
+```
+
+Default CI is offline and does not access a live Zotero library. See [docs/live-testing.md](docs/live-testing.md) for disposable-library live test guidance and [docs/release.md](docs/release.md) for the release checklist.
 
 ## License and attribution
 

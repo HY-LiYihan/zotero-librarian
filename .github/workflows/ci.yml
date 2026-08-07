@@ -21,8 +21,15 @@ jobs:
       - name: Install Python 3.9 TOML support
         if: matrix.python-version == '3.9'
         run: python -m pip install tomli
+      - name: Install package
+        run: python -m pip install -e .
       - name: Run tests
         run: python -m unittest discover -s tests -v
+      - name: Smoke CLI
+        run: |
+          zotero-librarian --help
+          zotero-librarian --json doctor --offline
+          zotero-librarian --json schema plan
       - name: Lint YAML
         run: |
           python -m pip install yamllint
@@ -37,6 +44,10 @@ jobs:
             https://raw.githubusercontent.com/openai/skills/main/skills/.system/skill-creator/scripts/quick_validate.py \
             --output /tmp/quick_validate.py
           python /tmp/quick_validate.py skills/zotero-librarian
+      - name: Build package
+        run: |
+          python -m pip install build
+          python -m build
 
   markdown:
     runs-on: ubuntu-latest

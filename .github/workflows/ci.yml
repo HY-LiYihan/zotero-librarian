@@ -33,7 +33,7 @@ jobs:
       - name: Lint YAML
         run: |
           python -m pip install yamllint
-          yamllint .github/workflows/ci.yml skills/zotero-librarian/agents/openai.yaml
+          yamllint .github/workflows/ci.yml .github/workflows/release.yml skills/zotero-librarian/agents/openai.yaml
       - name: Validate examples
         run: |
           python skills/zotero-librarian/scripts/librarian_guard.py taxonomy taxonomy.example.toml

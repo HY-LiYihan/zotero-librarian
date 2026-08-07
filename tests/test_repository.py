@@ -9,6 +9,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RepositoryTests(unittest.TestCase):
+    def tracked_resource_files(self, root: Path) -> list[Path]:
+        return sorted(
+            path.relative_to(root)
+            for path in root.rglob("*")
+            if path.is_file()
+            and "__pycache__" not in path.parts
+            and path.suffix != ".pyc"
+        )
+
     def test_no_generated_or_secret_files(self) -> None:
         forbidden_names = {".DS_Store", "private.env", ".env", "zotero.sqlite"}
         found = [str(path.relative_to(ROOT)) for path in ROOT.rglob("*") if path.name in forbidden_names]
@@ -50,8 +59,8 @@ class RepositoryTests(unittest.TestCase):
     def test_embedded_skill_matches_canonical_skill(self) -> None:
         canonical = ROOT / "skills" / "zotero-librarian"
         embedded = ROOT / "src" / "zotero_librarian" / "resources" / "skills" / "zotero-librarian"
-        canonical_files = sorted(path.relative_to(canonical) for path in canonical.rglob("*") if path.is_file())
-        embedded_files = sorted(path.relative_to(embedded) for path in embedded.rglob("*") if path.is_file())
+        canonical_files = self.tracked_resource_files(canonical)
+        embedded_files = self.tracked_resource_files(embedded)
         self.assertEqual(canonical_files, embedded_files)
         for relative in canonical_files:
             self.assertEqual(

@@ -34,7 +34,13 @@ Zotero Librarian 是一个 release-ready 的 Python CLI 和 companion Agent skil
 uvx zotero-librarian skills install --codex
 ```
 
-安装后开启一个新的 Codex turn，让 Codex 重新发现新 skill。
+也可以使用快捷命令：
+
+```bash
+uvx zotero-librarian install-codex-skill
+```
+
+安装后开启一个新的 Codex turn，让 Agent 重新发现新 skill。下面的诊断命令可以立即运行。
 
 不连接 Zotero，先验证 skill-only 安装：
 
@@ -46,6 +52,13 @@ skill-only 安装成功时，`skillReady` 和 `ready` 应为 `true`。在安装
 `zotero-agent`、bridge XPI 并打开 Zotero Desktop 前，`liveReady` 可以仍为
 `false`。
 
+小白 smoke test 的预期结果：
+
+- `ready: true` 表示 skill-only 设置可用。
+- `skillReady: true` 表示新的 Codex turn 可以加载内嵌工作流。
+- 在安装 `zotero-agent`、bridge XPI 并打开 Zotero Desktop 前，`liveReady: false` 是正常状态。
+- `doctor --offline` 不需要 Zotero Desktop、`zotero-agent` 或 bridge XPI。
+
 如果没有 `uvx`，可以用 virtual environment：
 
 ```bash
@@ -53,6 +66,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install zotero-librarian
 zotero-librarian skills install --codex
+zotero-librarian --json doctor --offline
 ```
 
 如果要安装到 Claude Code，使用同一个包但换成 Claude 目标：
@@ -69,9 +83,16 @@ uvx zotero-librarian skills install --codex --force
 
 ## 真实 Zotero 设置
 
-真实读写文库需要上游后端：
+真实读写文库需要上游后端，建议按这个顺序：
 
-先安装并验证底层：
+1. 安装 `zotero-agent`。
+2. 从上游 `zotero-agent` Release 安装匹配的 bridge XPI。
+3. 打开 Zotero Desktop，并确认 local API access 已启用。
+4. 运行 `zot init`。
+5. 运行 `zot ping`。
+6. 运行完整的 `zotero-librarian` 诊断。
+
+命令：
 
 ```bash
 uv tool install zotero-agent
@@ -79,7 +100,7 @@ zot init
 zot ping
 ```
 
-bridge XPI 需要从上游 `zotero-agent` Release 获取，并先阅读其安全说明。
+安装前先阅读上游 bridge XPI 的安全说明。不要把 Zotero Web API key 当作 fallback。
 
 确认 Zotero Desktop 正在运行并且 `zot ping` 通过后，再运行完整诊断：
 
@@ -107,6 +128,9 @@ cd zotero-librarian
 python3 -m pip install -e .
 zotero-librarian --json doctor --offline
 ```
+
+Python 3.9/3.10 下请安装 package 后再运行命令，不要直接用裸
+`PYTHONPATH=src`，否则可能缺少 `tomli` 依赖。
 
 PyPI 入口也可用于一次性 CLI 调用：
 

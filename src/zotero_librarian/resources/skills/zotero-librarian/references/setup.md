@@ -7,7 +7,19 @@
 - The matching bridge XPI is installed in Zotero.
 - `zot init` has created the local mode-600 token configuration.
 
-## Install
+## Live Setup Order
+
+Follow this order for live Zotero access:
+
+1. Install `zotero-agent`.
+2. Install the matching bridge XPI from the upstream `zotero-agent` release.
+3. Start Zotero Desktop and confirm local API access is enabled.
+4. Run `zot init` to create the local mode-600 token configuration.
+5. Run `zot ping` to verify the local API, bridge execution, user ID, CLI
+   version, and bridge version.
+6. Run `zotero-librarian --json doctor`.
+
+## Install Commands
 
 ```bash
 uv tool install zotero-agent

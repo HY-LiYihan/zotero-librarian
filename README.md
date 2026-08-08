@@ -34,7 +34,13 @@ Install the companion Codex skill directly from PyPI:
 uvx zotero-librarian skills install --codex
 ```
 
-Then start a new Codex turn so the newly installed skill is discovered.
+Shortcut:
+
+```bash
+uvx zotero-librarian install-codex-skill
+```
+
+Then start a new Codex turn so the newly installed skill is discovered by the Agent. The diagnostic command below can run immediately.
 
 Verify the skill-only install without connecting to Zotero:
 
@@ -46,6 +52,15 @@ For a skill-only install, `skillReady` and `ready` should be `true`. `liveReady`
 can remain `false` until `zotero-agent`, the bridge XPI, and Zotero Desktop are
 set up.
 
+First-time smoke test expectation:
+
+- `ready: true` means the skill-only setup is usable.
+- `skillReady: true` means Codex can load the embedded workflow after a new turn.
+- `liveReady: false` is expected before installing `zotero-agent`, the bridge
+  XPI, and opening Zotero Desktop.
+- `doctor --offline` does not require Zotero Desktop, `zotero-agent`, or the
+  bridge XPI.
+
 If `uvx` is not available, use a virtual environment instead:
 
 ```bash
@@ -53,6 +68,7 @@ python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install zotero-librarian
 zotero-librarian skills install --codex
+zotero-librarian --json doctor --offline
 ```
 
 For Claude Code, use the same package with the Claude target:
@@ -69,9 +85,16 @@ uvx zotero-librarian skills install --codex --force
 
 ## Live Zotero Setup
 
-Live reads and writes require the upstream backend:
+Live reads and writes require the upstream backend. Use this order:
 
-Install and verify the backend first:
+1. Install `zotero-agent`.
+2. Install the matching bridge XPI from the upstream `zotero-agent` release.
+3. Start Zotero Desktop and confirm local API access is enabled.
+4. Run `zot init`.
+5. Run `zot ping`.
+6. Run the full `zotero-librarian` diagnostic.
+
+Commands:
 
 ```bash
 uv tool install zotero-agent
@@ -79,7 +102,7 @@ zot init
 zot ping
 ```
 
-Download the bridge XPI from the upstream `zotero-agent` release and review its security notes before installation.
+Review the upstream bridge XPI security notes before installation. Do not use a Zotero Web API key as a fallback.
 
 After Zotero Desktop is running and `zot ping` passes, run the full diagnostic:
 
@@ -107,6 +130,9 @@ cd zotero-librarian
 python3 -m pip install -e .
 zotero-librarian --json doctor --offline
 ```
+
+On Python 3.9/3.10, install the package instead of running raw `PYTHONPATH=src`
+commands so the `tomli` dependency is available.
 
 The PyPI entrypoint is also available for one-off CLI use:
 

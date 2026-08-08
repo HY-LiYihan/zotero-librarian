@@ -47,6 +47,21 @@ class RepositoryTests(unittest.TestCase):
             self.assertIn("fullComplete", value)
             self.assertIn("source_identity_plan.py", value)
 
+    def test_beginner_docs_cover_forward_test_feedback(self) -> None:
+        english = (ROOT / "README.md").read_text(encoding="utf-8")
+        chinese = (ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+        setup = (ROOT / "skills" / "zotero-librarian" / "references" / "setup.md").read_text(encoding="utf-8")
+        self.assertIn("First-time smoke test expectation", english)
+        self.assertIn("小白 smoke test", chinese)
+        self.assertIn("install-codex-skill", english)
+        self.assertIn("zotero-librarian --json doctor --offline", english)
+        self.assertIn("zotero-librarian --json doctor --offline", chinese)
+        self.assertIn("Python 3.9/3.10", english)
+        self.assertIn("## Live Setup Order", setup)
+        self.assertIn("1. Install `zotero-agent`.", setup)
+        self.assertIn("2. Install the matching bridge XPI", setup)
+        self.assertIn("Do not use a Zotero Web API key", setup)
+
     def test_skill_has_no_personal_paths_or_taxonomy(self) -> None:
         text = "\n".join(
             path.read_text(encoding="utf-8")

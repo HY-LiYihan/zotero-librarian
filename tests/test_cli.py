@@ -38,7 +38,7 @@ class CliTests(unittest.TestCase):
         result, payload = self.json_cli("doctor", "--offline")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(payload["ok"])
-        self.assertEqual("0.1.3", payload["checks"]["package"]["version"])
+        self.assertEqual("0.1.4", payload["checks"]["package"]["version"])
         self.assertEqual("offline", payload["checks"]["zoteroBridge"]["reason"])
         self.assertIn("skillReady", payload)
         self.assertIn("liveReady", payload)
@@ -56,7 +56,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertTrue(payload["ok"])
             self.assertIn("Start a new Codex turn", payload["nextSteps"][0])
-            self.assertTrue(any("uvx zotero-librarian --json doctor" in step for step in payload["nextSteps"]))
+            self.assertTrue(any("zotero-librarian --json doctor --offline" in step for step in payload["nextSteps"]))
+            self.assertTrue(any("uvx zotero-librarian --json doctor --offline" in step for step in payload["nextSteps"]))
             self.assertTrue((codex_home / "skills" / "zotero-librarian" / "SKILL.md").exists())
 
             result, payload = self.json_cli(
@@ -94,7 +95,22 @@ class CliTests(unittest.TestCase):
             result = self.run_cli("skills", "install", "--help")
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertIn("uvx zotero-librarian skills install --codex", result.stdout)
+            self.assertIn("uvx zotero-librarian install-codex-skill", result.stdout)
             self.assertIn("uvx zotero-librarian --json doctor --offline", result.stdout)
+
+            result = self.run_cli("--help")
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("install-codex-skill", result.stdout)
+            self.assertIn("First-time Codex setup", result.stdout)
+
+            alias_home = temp_root / "alias-codex"
+            result, payload = self.json_cli(
+                "install-codex-skill",
+                env={"CODEX_HOME": str(alias_home)},
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(payload["ok"])
+            self.assertTrue((alias_home / "skills" / "zotero-librarian" / "SKILL.md").exists())
 
     def test_schema_and_skill_read(self) -> None:
         result, payload = self.json_cli("schema", "plan")

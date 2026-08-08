@@ -268,8 +268,9 @@ def skill_install_next_steps(args: argparse.Namespace) -> list[str]:
         steps.append("Start a new Codex turn so the zotero-librarian skill is discovered.")
     if args.claude:
         steps.append("Restart or refresh Claude Code so the zotero-librarian skill is discovered.")
-    steps.append("For live Zotero work, keep Zotero Desktop running and run: uvx zotero-librarian --json doctor")
-    steps.append("If you installed the CLI persistently, you can use: zotero-librarian --json doctor")
+    steps.append("Verify skill-only setup now: zotero-librarian --json doctor --offline")
+    steps.append("If you are using one-off uvx instead of a persistent command, use: uvx zotero-librarian --json doctor --offline")
+    steps.append("After zotero-agent, the bridge XPI, and Zotero Desktop are ready, run the same doctor command without --offline.")
     return steps
 
 
@@ -294,6 +295,12 @@ def command_skills_install(args: argparse.Namespace) -> int:
             for step in next_steps:
                 print(f"- {step}")
     return 0
+
+
+def command_install_codex_skill(args: argparse.Namespace) -> int:
+    args.codex = True
+    args.claude = False
+    return command_skills_install(args)
 
 
 def command_library_export(args: argparse.Namespace) -> int:
@@ -570,6 +577,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="zotero-librarian",
         description="Safety-first CLI and Agent skill for local Zotero Desktop library maintenance.",
+        epilog=(
+            "First-time Codex setup:\n"
+            "  uvx zotero-librarian skills install --codex\n"
+            "  uvx zotero-librarian --json doctor --offline\n\n"
+            "Shortcut:\n"
+            "  uvx zotero-librarian install-codex-skill"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--json", dest="json_output", action="store_true", help="emit machine-readable JSON")
     parser.add_argument("--version", action="version", version=f"zotero-librarian {__version__}")
@@ -579,6 +594,15 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_argument("--offline", action="store_true", help="skip live Zotero bridge checks")
     doctor.add_argument("--config", type=Path, default=CONFIG_PATH, help="non-secret config path")
     doctor.set_defaults(func=command_doctor)
+
+    install_codex = sub.add_parser(
+        "install-codex-skill",
+        help="shortcut for 'skills install --codex'",
+        description="Install the embedded zotero-librarian skill into CODEX_HOME, or ~/.codex when unset.",
+    )
+    install_codex.add_argument("--force", action="store_true", help="overwrite an existing installed skill")
+    install_codex.add_argument("--dry-run", action="store_true", help="show destination without writing files")
+    install_codex.set_defaults(func=command_install_codex_skill)
 
     schema = sub.add_parser("schema", help="show JSON shapes for agent-facing outputs")
     schema.add_argument("name", choices=sorted(SCHEMAS))
@@ -600,6 +624,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Typical first-time Codex setup:\n"
             "  uvx zotero-librarian skills install --codex\n"
             "  uvx zotero-librarian --json doctor --offline\n\n"
+            "Shortcut:\n"
+            "  uvx zotero-librarian install-codex-skill\n\n"
             "After zotero-agent, the bridge XPI, and Zotero Desktop are ready:\n"
             "  uvx zotero-librarian --json doctor"
         ),

@@ -38,8 +38,56 @@ class CliTests(unittest.TestCase):
         result, payload = self.json_cli("doctor", "--offline")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(payload["ok"])
-        self.assertEqual("0.1.1", payload["checks"]["package"]["version"])
+        self.assertEqual("0.1.2", payload["checks"]["package"]["version"])
         self.assertEqual("offline", payload["checks"]["zoteroBridge"]["reason"])
+        self.assertIn("skillReady", payload)
+        self.assertIn("liveReady", payload)
+
+    def test_skill_install_explains_next_steps(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            temp_root = Path(directory)
+            codex_home = temp_root / ".codex"
+            result, payload = self.json_cli(
+                "skills",
+                "install",
+                "--codex",
+                env={"CODEX_HOME": str(codex_home)},
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(payload["ok"])
+            self.assertIn("Start a new Codex turn", payload["nextSteps"][0])
+            self.assertTrue(any("uvx zotero-librarian --json doctor" in step for step in payload["nextSteps"]))
+            self.assertTrue((codex_home / "skills" / "zotero-librarian" / "SKILL.md").exists())
+
+            result, payload = self.json_cli(
+                "doctor",
+                "--offline",
+                "--config",
+                str(temp_root / "config.toml"),
+                env={
+                    "CODEX_HOME": str(codex_home),
+                    "PATH": os.defpath,
+                },
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertTrue(payload["ready"])
+            self.assertTrue(payload["skillReady"])
+            self.assertFalse(payload["liveReady"])
+            self.assertFalse(payload["checks"]["zot"]["ok"])
+
+            result = self.run_cli(
+                "doctor",
+                "--offline",
+                "--config",
+                str(temp_root / "config.toml"),
+                env={
+                    "CODEX_HOME": str(codex_home),
+                    "PATH": os.defpath,
+                },
+            )
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("Skill install ready.", result.stdout)
+            self.assertIn("Live Zotero access still requires", result.stdout)
 
     def test_schema_and_skill_read(self) -> None:
         result, payload = self.json_cli("schema", "plan")

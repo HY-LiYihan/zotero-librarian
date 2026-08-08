@@ -171,8 +171,20 @@ def command_doctor(args: argparse.Namespace) -> int:
         }
     else:
         checks["zoteroBridge"] = {"ok": False, "skipped": True, "reason": "missing zot"}
-    ready = all(check.get("ok") is not False for check in checks.values())
-    result = {"ok": True, "ready": ready, "offline": args.offline, "checks": checks}
+    skill_ready = all(
+        checks[name].get("ok") is not False
+        for name in ("python", "package", "config", "embeddedSkill", "codexSkill")
+    )
+    live_ready = skill_ready and checks["zot"].get("ok") is True and checks["zoteroBridge"].get("ok") is True
+    ready = skill_ready if args.offline else live_ready
+    result = {
+        "ok": True,
+        "ready": ready,
+        "skillReady": skill_ready,
+        "liveReady": live_ready,
+        "offline": args.offline,
+        "checks": checks,
+    }
     if args.json_output:
         emit_json(result)
     else:
@@ -180,8 +192,16 @@ def command_doctor(args: argparse.Namespace) -> int:
         for name, check in checks.items():
             state = "SKIP" if check.get("ok") is None else "OK" if check.get("ok") else "FAIL"
             print(f"{name:<14} {state}")
-        if not ready:
-            print("Some setup checks failed; run with --json for details.", file=sys.stderr)
+        if ready:
+            print()
+            if args.offline:
+                print("Skill install ready.")
+                print("Live Zotero access still requires zotero-agent, the bridge XPI, and running Zotero Desktop.")
+            else:
+                print("Live Zotero access ready.")
+        else:
+            target = "skill install" if args.offline else "live Zotero access"
+            print(f"Some {target} checks failed; run with --json for details.", file=sys.stderr)
     return 0
 
 
@@ -238,6 +258,17 @@ def copy_skill(destination_root: Path, *, force: bool, dry_run: bool) -> dict[st
     return {"destination": str(destination), "installed": True}
 
 
+def skill_install_next_steps(args: argparse.Namespace) -> list[str]:
+    steps: list[str] = []
+    if args.codex:
+        steps.append("Start a new Codex turn so the zotero-librarian skill is discovered.")
+    if args.claude:
+        steps.append("Restart or refresh Claude Code so the zotero-librarian skill is discovered.")
+    steps.append("For live Zotero work, keep Zotero Desktop running and run: uvx zotero-librarian --json doctor")
+    steps.append("If you installed the CLI persistently, you can use: zotero-librarian --json doctor")
+    return steps
+
+
 def command_skills_install(args: argparse.Namespace) -> int:
     if not args.codex and not args.claude:
         raise CliError("missing_target", "pass --codex, --claude, or both", exit_code=2)
@@ -246,12 +277,18 @@ def command_skills_install(args: argparse.Namespace) -> int:
         results.append(copy_skill(Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "skills", force=args.force, dry_run=args.dry_run))
     if args.claude:
         results.append(copy_skill(Path(os.environ.get("CLAUDE_HOME", str(Path.home() / ".claude"))) / "skills", force=args.force, dry_run=args.dry_run))
+    next_steps = skill_install_next_steps(args)
     if args.json_output:
-        emit_json({"ok": True, "dryRun": args.dry_run, "results": results})
+        emit_json({"ok": True, "dryRun": args.dry_run, "results": results, "nextSteps": next_steps})
     else:
         for result in results:
             verb = "Would install to" if args.dry_run else "Installed to"
             print(f"{verb} {result['destination']}")
+        if not args.dry_run:
+            print()
+            print("Next steps:")
+            for step in next_steps:
+                print(f"- {step}")
     return 0
 
 

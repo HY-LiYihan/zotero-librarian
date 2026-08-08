@@ -17,10 +17,59 @@ Zotero Librarian is a release-ready Python CLI and companion Agent skill for saf
 
 ## Requirements
 
-- Zotero Desktop 7-9, running locally for live operations
 - Python 3.9+
-- `zotero-agent` CLI and bridge XPI
-- `uv`, `pipx`, or `pip` for local installation
+- `uv` for the shortest install path, or a Python virtual environment with `pip`
+- Zotero Desktop 7-9, `zotero-agent`, and the bridge XPI only when doing live Zotero operations
+
+## Beginner Path
+
+There are two separate setup phases:
+
+1. **Install the Agent skill** so Codex can learn the workflow. This does not require Zotero to be open.
+2. **Enable live Zotero access** only when you want the Agent to inspect or modify your real library.
+
+Install the companion Codex skill directly from PyPI:
+
+```bash
+uvx zotero-librarian skills install --codex
+```
+
+Then start a new Codex turn so the newly installed skill is discovered.
+
+Verify the skill-only install without connecting to Zotero:
+
+```bash
+uvx zotero-librarian --json doctor --offline
+```
+
+For a skill-only install, `skillReady` and `ready` should be `true`. `liveReady`
+can remain `false` until `zotero-agent`, the bridge XPI, and Zotero Desktop are
+set up.
+
+If `uvx` is not available, use a virtual environment instead:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install zotero-librarian
+zotero-librarian skills install --codex
+```
+
+For Claude Code, use the same package with the Claude target:
+
+```bash
+uvx zotero-librarian skills install --claude
+```
+
+Use `--force` when updating an already installed skill:
+
+```bash
+uvx zotero-librarian skills install --codex --force
+```
+
+## Live Zotero Setup
+
+Live reads and writes require the upstream backend:
 
 Install and verify the backend first:
 
@@ -32,34 +81,22 @@ zot ping
 
 Download the bridge XPI from the upstream `zotero-agent` release and review its security notes before installation.
 
-## Install
-
-Install the companion Codex skill directly from PyPI:
+After Zotero Desktop is running and `zot ping` passes, run the full diagnostic:
 
 ```bash
-uvx zotero-librarian skills install --codex
+zotero-librarian --json doctor
 ```
 
-Then start a new Codex turn so the newly installed skill is discovered.
+For live work, `liveReady` and `ready` should both be `true`.
 
-For Claude Code, use the same package with the Claude target:
-
-```bash
-uvx zotero-librarian skills install --claude
-```
+## Persistent CLI Install
 
 If you want the CLI to stay on your PATH, install it as a persistent tool first:
 
 ```bash
 uv tool install zotero-librarian
 zotero-librarian --json doctor --offline
-zotero-librarian skills install --codex
-```
-
-Use `--force` when updating an already installed skill:
-
-```bash
-uvx zotero-librarian skills install --codex --force
+zotero-librarian skills install --codex --force
 ```
 
 From a cloned repository, install the CLI locally for development:

@@ -17,10 +17,59 @@ Zotero Librarian 是一个 release-ready 的 Python CLI 和 companion Agent skil
 
 ## 环境要求
 
-- 本地运行的 Zotero Desktop 7-9
 - Python 3.9+
-- `zotero-agent` CLI 和 bridge XPI
-- `uv`、`pipx` 或 `pip`
+- 最短安装路径需要 `uv`；也可以使用 Python virtual environment 加 `pip`
+- 只有做真实 Zotero 文库读写时，才需要 Zotero Desktop 7-9、`zotero-agent` 和 bridge XPI
+
+## 小白路径
+
+设置分成两个阶段：
+
+1. **安装 Agent skill**，让 Codex 学会这套工作流；这一步不需要打开 Zotero。
+2. **开启真实 Zotero 访问**，只在需要 Agent 查看或修改真实文库时配置。
+
+直接从 PyPI 安装 companion Codex skill：
+
+```bash
+uvx zotero-librarian skills install --codex
+```
+
+安装后开启一个新的 Codex turn，让 Codex 重新发现新 skill。
+
+不连接 Zotero，先验证 skill-only 安装：
+
+```bash
+uvx zotero-librarian --json doctor --offline
+```
+
+skill-only 安装成功时，`skillReady` 和 `ready` 应为 `true`。在安装
+`zotero-agent`、bridge XPI 并打开 Zotero Desktop 前，`liveReady` 可以仍为
+`false`。
+
+如果没有 `uvx`，可以用 virtual environment：
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install zotero-librarian
+zotero-librarian skills install --codex
+```
+
+如果要安装到 Claude Code，使用同一个包但换成 Claude 目标：
+
+```bash
+uvx zotero-librarian skills install --claude
+```
+
+更新已安装 skill 时使用 `--force`：
+
+```bash
+uvx zotero-librarian skills install --codex --force
+```
+
+## 真实 Zotero 设置
+
+真实读写文库需要上游后端：
 
 先安装并验证底层：
 
@@ -32,34 +81,22 @@ zot ping
 
 bridge XPI 需要从上游 `zotero-agent` Release 获取，并先阅读其安全说明。
 
-## 安装
-
-直接从 PyPI 安装 companion Codex skill：
+确认 Zotero Desktop 正在运行并且 `zot ping` 通过后，再运行完整诊断：
 
 ```bash
-uvx zotero-librarian skills install --codex
+zotero-librarian --json doctor
 ```
 
-安装后开启一个新的 Codex turn，让 Codex 重新发现新 skill。
+真实文库工作开始前，`liveReady` 和 `ready` 都应为 `true`。
 
-如果要安装到 Claude Code，使用同一个包但换成 Claude 目标：
-
-```bash
-uvx zotero-librarian skills install --claude
-```
+## 持久安装 CLI
 
 如果希望 CLI 长期保留在 PATH 上，先做持久安装：
 
 ```bash
 uv tool install zotero-librarian
 zotero-librarian --json doctor --offline
-zotero-librarian skills install --codex
-```
-
-更新已安装 skill 时使用 `--force`：
-
-```bash
-uvx zotero-librarian skills install --codex --force
+zotero-librarian skills install --codex --force
 ```
 
 从仓库本地安装 CLI 供开发使用：

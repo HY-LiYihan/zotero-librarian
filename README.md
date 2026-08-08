@@ -34,7 +34,35 @@ Download the bridge XPI from the upstream `zotero-agent` release and review its 
 
 ## Install
 
-From a cloned repository, install the release-ready CLI locally:
+Install the companion Codex skill directly from PyPI:
+
+```bash
+uvx zotero-librarian skills install --codex
+```
+
+Then start a new Codex turn so the newly installed skill is discovered.
+
+For Claude Code, use the same package with the Claude target:
+
+```bash
+uvx zotero-librarian skills install --claude
+```
+
+If you want the CLI to stay on your PATH, install it as a persistent tool first:
+
+```bash
+uv tool install zotero-librarian
+zotero-librarian --json doctor --offline
+zotero-librarian skills install --codex
+```
+
+Use `--force` when updating an already installed skill:
+
+```bash
+uvx zotero-librarian skills install --codex --force
+```
+
+From a cloned repository, install the CLI locally for development:
 
 ```bash
 git clone https://github.com/HY-LiYihan/zotero-librarian.git
@@ -43,17 +71,10 @@ python3 -m pip install -e .
 zotero-librarian --json doctor --offline
 ```
 
-After PyPI publication, the intended entrypoint is:
+The PyPI entrypoint is also available for one-off CLI use:
 
 ```bash
 uvx zotero-librarian --help
-```
-
-Install the embedded Agent skill from the same CLI build:
-
-```bash
-zotero-librarian skills install --codex
-zotero-librarian skills install --claude
 ```
 
 The legacy installer remains available for users who only want to copy the skill:

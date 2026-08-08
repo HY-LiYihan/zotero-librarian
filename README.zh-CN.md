@@ -34,7 +34,35 @@ bridge XPI 需要从上游 `zotero-agent` Release 获取，并先阅读其安全
 
 ## 安装
 
-从仓库本地安装 release-ready CLI：
+直接从 PyPI 安装 companion Codex skill：
+
+```bash
+uvx zotero-librarian skills install --codex
+```
+
+安装后开启一个新的 Codex turn，让 Codex 重新发现新 skill。
+
+如果要安装到 Claude Code，使用同一个包但换成 Claude 目标：
+
+```bash
+uvx zotero-librarian skills install --claude
+```
+
+如果希望 CLI 长期保留在 PATH 上，先做持久安装：
+
+```bash
+uv tool install zotero-librarian
+zotero-librarian --json doctor --offline
+zotero-librarian skills install --codex
+```
+
+更新已安装 skill 时使用 `--force`：
+
+```bash
+uvx zotero-librarian skills install --codex --force
+```
+
+从仓库本地安装 CLI 供开发使用：
 
 ```bash
 git clone https://github.com/HY-LiYihan/zotero-librarian.git
@@ -43,17 +71,10 @@ python3 -m pip install -e .
 zotero-librarian --json doctor --offline
 ```
 
-正式发布 PyPI 后，预期入口是：
+PyPI 入口也可用于一次性 CLI 调用：
 
 ```bash
 uvx zotero-librarian --help
-```
-
-从同一 CLI 构建安装内嵌 Agent skill：
-
-```bash
-zotero-librarian skills install --codex
-zotero-librarian skills install --claude
 ```
 
 只想复制 skill 的用户仍可使用旧安装脚本：

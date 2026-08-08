@@ -38,7 +38,7 @@ class CliTests(unittest.TestCase):
         result, payload = self.json_cli("doctor", "--offline")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(payload["ok"])
-        self.assertEqual("0.1.0", payload["checks"]["package"]["version"])
+        self.assertEqual("0.1.1", payload["checks"]["package"]["version"])
         self.assertEqual("offline", payload["checks"]["zoteroBridge"]["reason"])
 
     def test_schema_and_skill_read(self) -> None:

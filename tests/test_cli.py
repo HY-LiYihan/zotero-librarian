@@ -38,7 +38,7 @@ class CliTests(unittest.TestCase):
         result, payload = self.json_cli("doctor", "--offline")
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertTrue(payload["ok"])
-        self.assertEqual("0.1.2", payload["checks"]["package"]["version"])
+        self.assertEqual("0.1.3", payload["checks"]["package"]["version"])
         self.assertEqual("offline", payload["checks"]["zoteroBridge"]["reason"])
         self.assertIn("skillReady", payload)
         self.assertIn("liveReady", payload)
@@ -88,6 +88,13 @@ class CliTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             self.assertIn("Skill install ready.", result.stdout)
             self.assertIn("Live Zotero access still requires", result.stdout)
+            self.assertIn("zot            SKIP (live only)", result.stdout)
+            self.assertNotIn("zot            FAIL", result.stdout)
+
+            result = self.run_cli("skills", "install", "--help")
+            self.assertEqual(0, result.returncode, result.stderr)
+            self.assertIn("uvx zotero-librarian skills install --codex", result.stdout)
+            self.assertIn("uvx zotero-librarian --json doctor --offline", result.stdout)
 
     def test_schema_and_skill_read(self) -> None:
         result, payload = self.json_cli("schema", "plan")

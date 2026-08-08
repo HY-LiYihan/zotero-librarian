@@ -191,7 +191,11 @@ def command_doctor(args: argparse.Namespace) -> int:
         print(f"zotero-librarian {__version__}")
         for name, check in checks.items():
             state = "SKIP" if check.get("ok") is None else "OK" if check.get("ok") else "FAIL"
-            print(f"{name:<14} {state}")
+            note = ""
+            if args.offline and name in {"zot", "zoteroBridge"} and check.get("ok") is not True:
+                state = "SKIP"
+                note = " (live only)"
+            print(f"{name:<14} {state}{note}")
         if ready:
             print()
             if args.offline:
@@ -588,11 +592,23 @@ def build_parser() -> argparse.ArgumentParser:
     skills_read = skills_sub.add_parser("read", help="print an embedded skill resource")
     skills_read.add_argument("resource", help="zotero-librarian or zotero-librarian/<path>")
     skills_read.set_defaults(func=command_skills_read)
-    skills_install = skills_sub.add_parser("install", help="install embedded skill for Agent clients")
-    skills_install.add_argument("--codex", action="store_true")
-    skills_install.add_argument("--claude", action="store_true")
-    skills_install.add_argument("--force", action="store_true")
-    skills_install.add_argument("--dry-run", action="store_true")
+    skills_install = skills_sub.add_parser(
+        "install",
+        help="install embedded skill for Agent clients",
+        description="Install the embedded zotero-librarian skill for Codex or Claude Code.",
+        epilog=(
+            "Typical first-time Codex setup:\n"
+            "  uvx zotero-librarian skills install --codex\n"
+            "  uvx zotero-librarian --json doctor --offline\n\n"
+            "After zotero-agent, the bridge XPI, and Zotero Desktop are ready:\n"
+            "  uvx zotero-librarian --json doctor"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    skills_install.add_argument("--codex", action="store_true", help="install into CODEX_HOME, or ~/.codex when unset")
+    skills_install.add_argument("--claude", action="store_true", help="install into CLAUDE_HOME, or ~/.claude when unset")
+    skills_install.add_argument("--force", action="store_true", help="overwrite an existing installed skill")
+    skills_install.add_argument("--dry-run", action="store_true", help="show destination without writing files")
     skills_install.set_defaults(func=command_skills_install)
 
     library = sub.add_parser("library", help="export, audit, and summarize Zotero libraries")

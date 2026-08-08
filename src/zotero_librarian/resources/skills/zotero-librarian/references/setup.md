@@ -22,6 +22,22 @@ release before performing writes. Remove or repoint stale `zot` shims when
 
 Install the bridge XPI from the upstream release before `zot init`. Do not place bridge tokens in Codex `config.toml`, repository files, or prompts.
 
+After installing only the Agent skill, verify the skill-only path without live
+Zotero access:
+
+```bash
+zotero-librarian --json doctor --offline
+```
+
+`skillReady: true` means the Agent workflow is installed. `liveReady: false` is
+expected until `zotero-agent`, the bridge XPI, and Zotero Desktop are ready.
+
+After `zot ping` succeeds with Zotero Desktop running, verify live access:
+
+```bash
+zotero-librarian --json doctor
+```
+
 ## Diagnostic Contract
 
 `zot ping` must confirm the local read API, bridge execution, user ID, CLI
@@ -32,4 +48,6 @@ version, and a compatible bridge version. If it fails:
 - Token failure: rerun `zot init` or rotate the upstream token; do not expose it.
 - Unsupported CLI: upgrade `zotero-agent` and retry.
 
-Do not use Web API credentials as a fallback. Metadata writes through the bridge are local, and stored attachments are synchronized by Zotero Desktop using the user's configured storage provider.
+Do not use a Zotero Web API key or Web API credentials as a fallback. Metadata
+writes through the bridge are local, and stored attachments are synchronized by
+Zotero Desktop using the user's configured storage provider.
